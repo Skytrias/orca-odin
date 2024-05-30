@@ -4,9 +4,6 @@ import io
 # kind: module, typename, union, struct, array, f32, i32, u32, bool, void, char, variadic-param, pointer, namedType
 # kind: enum-constant, macro
 
-# TODO
-# type aliases see utf32
-
 # exclude oc_* from any string
 def prefix_trim_oc(name):
     if name.startswith("oc_"):
@@ -39,6 +36,10 @@ def get_inner_kind(obj):
             output = "rawptr"
         else:
             output = "^" + result
+
+        # turn ^char to cstring
+        if output == "^char":
+            output = "cstring"
     elif result == "namedType":
         inner_type = obj["type"]
         result = get_type_name_or_kind(inner_type)
@@ -109,7 +110,7 @@ def gen_proc(obj, file, indent):
 
 # add indentation 
 def indent_string(indent):
-    return "  " * indent
+    return "\t" * indent
 
 # write spacers and actual module docs
 def gen_module_doc(obj, file):
@@ -128,12 +129,17 @@ type_builtins = {
     "mat2x3": "[2][3]f32", # TODO
     "rect": "[4]f32",
     "color": "[4]f32",
-    "str8": "string",
 
     "ui_layout_align": "[2]ui_align",
     "ui_box_size": "[2]ui_size",
     "ui_box_floating": "[2]bool",
+    
+    "mat2x3": "#row_major matrix[2, 3]f32",
+    
     "utf32": "rune",
+    "str8": "string",
+    "str16": "distinct []rune",
+    "str32": "distinct []u16",
 }
 
 # generate a default builtin instead of complex xy or xywh C struct+union pairs
@@ -387,7 +393,7 @@ if __name__ == "__main__":
     with open("api.json", "r") as api_file:
         api_desc = json.load(api_file)
 
-    with open("output.odin", "w") as odin_file:
+    with open("orca.odin", "w") as odin_file:
         temp_block = io.StringIO("")
         
         for module in api_desc:
