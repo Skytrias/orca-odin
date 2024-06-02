@@ -1,3 +1,14 @@
+package orca
+
+import "core:c"
+
+char :: c.char
+window :: distinct u64
+pool :: struct {
+	arena: arena,
+	freeList: list,
+	blockSize: u64,
+}
 ////////////////////////////////////////////////////////////////////////////////
 // Utility data structures and helpers used throughout the Orca API.
 ////////////////////////////////////////////////////////////////////////////////
@@ -130,7 +141,11 @@ foreign {
 ////////////////////////////////////////////////////////////////////////////////
 
 // The prototype of a procedure to reserve memory from the system.
+mem_reserve_proc :: proc(_context: ^base_allocator, size: u64) -> rawptr
+
 // The prototype of a procedure to modify a memory reservation.
+mem_modify_proc :: proc(_context: ^base_allocator, ptr: rawptr, size: u64)
+
 // A structure that defines how to allocate memory from the system.
 base_allocator :: struct {
 	// A procedure to reserve memory from the system.
@@ -262,7 +277,7 @@ foreign {
 	str8_push_cstring :: proc(arena: ^arena, str: cstring) -> str8 ---
 	str8_push_copy :: proc(arena: ^arena, s: str8) -> str8 ---
 	str8_push_slice :: proc(arena: ^arena, s: str8, start: u64, end: u64) -> str8 ---
-	str8_pushfv :: proc(arena: ^arena, format: cstring, args: va_list) -> str8 ---
+	str8_pushfv :: proc(arena: ^arena, format: cstring, #c_vararg args: ..any) -> str8 ---
 	str8_pushf :: proc(arena: ^arena, format: cstring, #c_vararg args: ..any) -> str8 ---
 	str8_cmp :: proc(s1: str8, s2: str8) -> i32 ---
 	str8_to_cstring :: proc(arena: ^arena, _string: str8) -> cstring ---
@@ -639,7 +654,7 @@ key_event :: struct {
 
 char_event :: struct {
 	codepoint: utf32,
-	sequence: array,
+	sequence: [8]char,
 	seqLen: u8,
 }
 
@@ -673,7 +688,9 @@ file_dialog_kind :: enum u32 {
 	OPEN = 1,
 }
 
-_oc_file_dialog_flags :: enum u32 {
+file_dialog_flags :: u32
+
+file_dialog_flags :: enum u32 {
 	FILES = 1,
 	DIRECTORIES = 2,
 	MULTIPLE = 4,
@@ -720,6 +737,8 @@ foreign {
 
 file :: distinct u64
 
+file_open_flags :: u16
+
 file_open_flags_enum :: enum u32 {
 	NONE = 0,
 	APPEND = 2,
@@ -729,6 +748,8 @@ file_open_flags_enum :: enum u32 {
 	NO_FOLLOW = 32,
 	RESTRICT = 64,
 }
+
+file_access :: u16
 
 file_access_enum :: enum u32 {
 	NONE = 0,
@@ -741,6 +762,10 @@ file_whence :: enum u32 {
 	END = 1,
 	CURRENT = 2,
 }
+
+io_req_id :: u64
+
+io_op :: u32
 
 io_op_enum :: enum u32 {
 	OPEN_AT = 0,
@@ -774,6 +799,8 @@ io_req :: struct {
 		whence: file_whence,
 	},
 }
+
+io_error :: i32
 
 io_error_enum :: enum u32 {
 	OK = 0,
@@ -822,6 +849,8 @@ file_type :: enum u32 {
 	FIFO = 6,
 	SOCKET = 7,
 }
+
+file_perm :: u16
 
 file_perm_enum :: enum u32 {
 	OTHER_EXEC = 1,
@@ -972,7 +1001,7 @@ text_metrics :: struct {
 	advance: vec2,
 }
 
-
+rect_atlas :: struct {}
 
 image_region :: struct {
 	image: image,
@@ -992,7 +1021,7 @@ foreign {
 	surface_set_hidden :: proc(surface: surface, hidden: bool) ---
 	color_rgba :: proc(r: f32, g: f32, b: f32, a: f32) -> color ---
 	color_srgba :: proc(r: f32, g: f32, b: f32, a: f32) -> color ---
-	color_convert :: proc(color: color, colorSpace: color_space) -> color ---
+	color_convert :: proc(_color: color, colorSpace: color_space) -> color ---
 	canvas_renderer_nil :: proc() -> canvas_renderer ---
 	canvas_renderer_is_nil :: proc(renderer: canvas_renderer) -> bool ---
 	canvas_renderer_create :: proc() -> canvas_renderer ---
@@ -1039,14 +1068,14 @@ foreign {
 	image_atlas_alloc_from_file :: proc(atlas: ^rect_atlas, backingImage: image, file: file, flip: bool) -> image_region ---
 	image_atlas_alloc_from_path :: proc(atlas: ^rect_atlas, backingImage: image, path: str8, flip: bool) -> image_region ---
 	image_atlas_recycle :: proc(atlas: ^rect_atlas, imageRgn: image_region) ---
-	matrix_push :: proc(matrix: mat2x3) ---
-	matrix_multiply_push :: proc(matrix: mat2x3) ---
+	matrix_push :: proc(_matrix: mat2x3) ---
+	matrix_multiply_push :: proc(_matrix: mat2x3) ---
 	matrix_pop :: proc() ---
 	matrix_top :: proc() -> mat2x3 ---
 	clip_push :: proc(x: f32, y: f32, w: f32, h: f32) ---
 	clip_pop :: proc() ---
 	clip_top :: proc() -> rect ---
-	set_color :: proc(color: color) ---
+	set_color :: proc(_color: color) ---
 	set_color_rgba :: proc(r: f32, g: f32, b: f32, a: f32) ---
 	set_color_srgba :: proc(r: f32, g: f32, b: f32, a: f32) ---
 	set_gradient :: proc(blendSpace: gradient_blend_space, bottomLeft: color, bottomRight: color, topRight: color, topLeft: color) ---
@@ -1124,7 +1153,7 @@ key_state :: struct {
 }
 
 keyboard_state :: struct {
-	keys: array,
+	keys: [349]key_state,
 	mods: keymod_flags,
 }
 
@@ -1135,7 +1164,7 @@ mouse_state :: struct {
 	delta: vec2,
 	wheel: vec2,
 	_: struct #raw_union {
-		buttons: array,
+		buttons: [5]key_state,
 		_: struct {
 			left: key_state,
 			right: key_state,
@@ -1150,7 +1179,7 @@ BACKING_SIZE :: 64
 
 text_state :: struct {
 	lastUpdate: u64,
-	backing: array,
+	backing: [64]utf32,
 	codePoints: str32,
 }
 
@@ -1187,21 +1216,8 @@ ui_layout_align :: [2]ui_align
 
 ui_layout :: struct {
 	axis: ui_axis,
-	spacing: f32,
-	_: struct #raw_union {
-		_: struct {
-			x: f32,
-			y: f32,
-		},
-		c: array,
-	},
-	margin: struct #raw_union {
-		_: struct {
-			x: f32,
-			y: f32,
-		},
-		c: array,
-	},
+	using _: [2]f32,
+	margin: [2]f32,
 	align: ui_layout_align,
 }
 
@@ -1224,40 +1240,40 @@ ui_box_size :: [2]ui_size
 
 ui_box_floating :: [2]bool
 
- :: enum u32 {
-	NONE = 0,
-	SIZE_WIDTH = 2,
-	SIZE_HEIGHT = 4,
-	LAYOUT_AXIS = 8,
-	LAYOUT_ALIGN_X = 16,
-	LAYOUT_ALIGN_Y = 32,
-	LAYOUT_SPACING = 64,
-	LAYOUT_MARGIN_X = 128,
-	LAYOUT_MARGIN_Y = 256,
-	FLOAT_X = 512,
-	FLOAT_Y = 1024,
-	COLOR = 2048,
-	BG_COLOR = 4096,
-	BORDER_COLOR = 8192,
-	BORDER_SIZE = 16384,
-	ROUNDNESS = 32768,
-	FONT = 65536,
-	FONT_SIZE = 131072,
-	ANIMATION_TIME = 262144,
-	ANIMATION_MASK = 524288,
-	SIZE = 6,
-	LAYOUT_MARGINS = 384,
-	LAYOUT = 504,
-	FLOAT = 1536,
-	MASK_INHERITED = 985088,
-}
+ui_style_mask :: u64
+
+STYLE_NONE :: 0
+STYLE_SIZE_WIDTH :: 2
+STYLE_SIZE_HEIGHT :: 4
+STYLE_LAYOUT_AXIS :: 8
+STYLE_LAYOUT_ALIGN_X :: 16
+STYLE_LAYOUT_ALIGN_Y :: 32
+STYLE_LAYOUT_SPACING :: 64
+STYLE_LAYOUT_MARGIN_X :: 128
+STYLE_LAYOUT_MARGIN_Y :: 256
+STYLE_FLOAT_X :: 512
+STYLE_FLOAT_Y :: 1024
+STYLE_COLOR :: 2048
+STYLE_BG_COLOR :: 4096
+STYLE_BORDER_COLOR :: 8192
+STYLE_BORDER_SIZE :: 16384
+STYLE_ROUNDNESS :: 32768
+STYLE_FONT :: 65536
+STYLE_FONT_SIZE :: 131072
+STYLE_ANIMATION_TIME :: 262144
+STYLE_ANIMATION_MASK :: 524288
+STYLE_SIZE :: 6
+STYLE_LAYOUT_MARGINS :: 384
+STYLE_LAYOUT :: 504
+STYLE_FLOAT :: 1536
+STYLE_MASK_INHERITED :: 985088
 
 ui_style :: struct {
 	size: ui_box_size,
 	layout: ui_layout,
 	floating: ui_box_floating,
 	floatTarget: vec2,
-	color: color,
+	_color: color,
 	bgColor: color,
 	borderColor: color,
 	font: font,
@@ -1472,6 +1488,8 @@ ui_selector_kind :: enum u32 {
 	KEY = 5,
 }
 
+ui_status :: u8
+
 ui_status_enum :: enum u32 {
 	NONE = 0,
 	HOVER = 2,
@@ -1520,9 +1538,9 @@ ui_box :: struct {
 	style: ui_style,
 	z: u32,
 	floatPos: vec2,
-	childrenSum: array,
-	spacing: array,
-	minSize: array,
+	childrenSum: [2]f32,
+	spacing: [2]f32,
+	minSize: [2]f32,
 	rect: rect,
 	sig: ^ui_sig,
 	fresh: bool,
@@ -1563,6 +1581,8 @@ ui_sig :: struct {
 	pasted: bool,
 }
 
+ui_box_draw_proc :: proc(arg0: ^ui_box, arg1: rawptr)
+
 ui_flags :: enum u32 {
 	NONE = 0,
 	CLICKABLE = 1,
@@ -1586,7 +1606,7 @@ MAX_INPUT_CHAR_PER_FRAME :: 64
 
 ui_input_text :: struct {
 	count: u8,
-	codePoints: array,
+	codePoints: [64]utf32,
 }
 
 ui_stack_elt :: struct {
@@ -1620,7 +1640,7 @@ ui_context :: struct {
 	lastFrameDuration: f64,
 	frameArena: arena,
 	boxPool: pool,
-	boxMap: array,
+	boxMap: [1024]list,
 	root: ^ui_box,
 	overlay: ^ui_box,
 	overlayList: list,
@@ -1706,7 +1726,7 @@ foreign {
 	ui_box_top :: proc() -> ^ui_box ---
 	ui_box_lookup_key :: proc(key: ui_key) -> ^ui_box ---
 	ui_box_lookup_str8 :: proc(_string: str8) -> ^ui_box ---
-	ui_box_set_draw_proc :: proc(box: ^ui_box, proc: ui_box_draw_proc, data: rawptr) ---
+	ui_box_set_draw_proc :: proc(box: ^ui_box, _proc: ui_box_draw_proc, data: rawptr) ---
 	ui_box_closed :: proc(box: ^ui_box) -> bool ---
 	ui_box_set_closed :: proc(box: ^ui_box, closed: bool) ---
 	ui_box_active :: proc(box: ^ui_box) -> bool ---

@@ -1,11 +1,18 @@
 import json
 import io
 
+# logger macros?
+# OC_ABORT?
+# multi pointers for things
+
 # kind: module, typename, union, struct, array, f32, i32, u32, bool, void, char, variadic-param, pointer, namedType
 # kind: enum-constant, macro
 
 # exclude oc_* from any string
 def prefix_trim_oc(name):
+    if name.startswith("_oc_"): # some enums have this
+        return name[4:]
+
     if name.startswith("oc_"):
         return name[3:]
 
@@ -52,14 +59,14 @@ def gen_param(obj, file):
     name = check_field_name(obj["name"]) # can be ... !
     
     # convert variadic-param to odin #c_vararg args: ..any
-    if name == "...":
+    variable_output = get_inner_kind(obj["type"])
+    if name == "..." or variable_output == "va_list":
         file.write("#c_vararg args: ..any")
         return
 
     if name == "context": # context is a keyword in odin
         name = "_context" 
 
-    variable_output = get_inner_kind(obj["type"])
     file.write(f"{name}: {variable_output}")
 
 # generate a multi or single line doc dependant on whats provided
@@ -79,10 +86,9 @@ def try_gen_doc(obj, file, indent):
         gen_doc(obj["doc"], file, indent)
 
 # generate a procedure declation with the parameters and its return type
-def gen_proc(obj, file, indent):
+def gen_proc(obj, name, write_foreign_finish, file, indent):
     kind = obj["kind"]
-    name = prefix_trim_oc(obj["name"])
-    brief = obj["brief"] if "brief" in obj else "" 
+    name = prefix_trim_oc(name)
 
     try_gen_doc(obj, file, indent)
     indent_str = indent_string(indent)
@@ -106,7 +112,10 @@ def gen_proc(obj, file, indent):
         file.write(f" -> {ret_kind}")
 
     # finish
-    file.write(" ---\n")
+    if write_foreign_finish:
+        file.write(" ---\n")
+    else:
+        file.write("\n")
 
 # add indentation 
 def indent_string(indent):
@@ -215,7 +224,7 @@ def check_enum_name_decimal(name):
 # generates an odin enum e.g. log_level :: enum { ... }
 def gen_enum(obj, file, name, indent):
     indent_str = indent_string(indent)
-    singleton = len(obj["constants"]) <= 1
+    singleton = len(obj["constants"]) <= 1 or name == ""
 
     # write enum description when not a singleton
     if not singleton:
@@ -227,8 +236,14 @@ def gen_enum(obj, file, name, indent):
 
     # write enum content from objects
     for const in obj["constants"]:
-        const_name = simplify_enum_name(const["name"])
+        real_name = const["name"]
+        const_name = simplify_enum_name(real_name)
         const_name = check_enum_name_decimal(const_name)
+        
+        # Exception for OC_STYLE currently, write out constant names
+        if real_name.startswith("OC_UI_STYLE"):
+            const_name = real_name[6:]
+        
         const_value = const["value"]
 
         # write docs if they exist
@@ -251,6 +266,9 @@ def gen_enum(obj, file, name, indent):
 # any oddities that need to be checked for field
 reserved_field_names = {
     "string", # think this is still allowed but eh
+    "matrix",
+    "proc",
+    "color", # issues when color is also return type...
 }
 
 # insert a _ before an identifier that may be invalid
@@ -282,8 +300,18 @@ def gen_union_fields(obj, file, indent):
 
             # always comma separate
             file.write(",\n")
+        elif field_kind == "array":
+            gen_fixed_array(field, file, field_name, indent)
         else:
             file.write(f"{indent_str}{field_name}: {field_kind},\n")
+
+# fixed size array in C
+def gen_fixed_array(obj, file, field_name, indent):
+    indent_str = indent_string(indent)
+    variable_type = obj["type"]
+    array_size = variable_type["count"]
+    array_type = get_inner_kind(variable_type["type"])
+    file.write(f"{indent_str}{field_name}: [{array_size}]{array_type},\n")
 
 # write struct fields from objects
 def gen_struct_fields(obj, file, indent):
@@ -306,16 +334,35 @@ def gen_struct_fields(obj, file, indent):
             variable_type = field["type"]
             gen_union_fields(variable_type, file, indent + 1)
             file.write(f"{indent_str}}},\n")
+        elif variable_output == "array": 
+            gen_fixed_array(field, file, field_name, indent)
         else:
             file.write(f"{indent_str}{field_name}: {variable_output},\n")
 
+def gen_structs_manually(file, name):
+    if name == "ui_layout":
+        file.write("""ui_layout :: struct {
+\taxis: ui_axis,
+\tusing _: [2]f32,
+\tmargin: [2]f32,
+\talign: ui_layout_align,
+}""")
+        return True
+
+    return False
+
 # generate an odin struct with its fields
 def gen_struct(obj, file, name, indent):
-    # if a struct doesnt have fields, skip it
-    if "fields" not in obj:
-        return
-
     indent_str = indent_string(indent)
+
+    # just do this one manually
+    if gen_structs_manually(file, name):
+        return
+    
+    # if a struct doesnt have fields just skip fields
+    if "fields" not in obj:
+        file.write(f"{indent_str}{name} :: struct {{}}")
+        return
 
     # check if its a handle struct only, convert that into a distinct handle
     if len(obj["fields"]) == 1:
@@ -330,6 +377,11 @@ def gen_struct(obj, file, name, indent):
     file.write(f"{indent_str}{name}{seperator} struct {{\n")
     gen_struct_fields(obj, file, indent + 1)
     file.write(f"{indent_str}}}")
+
+def gen_typedef(obj, file, name, indent):
+    indent_str = indent_string(indent)
+    typedef_kind = obj["kind"]
+    file.write(f"{indent_str}{name} :: {typedef_kind}\n\n")
 
 # main object of the api which could be struct, union, enums or macros (unsupported)
 def gen_typename_object(obj, file, indent):
@@ -353,6 +405,11 @@ def gen_typename_object(obj, file, indent):
         file.write(f"{name} :: union {{}}\n\n")
     elif kind == "enum":
         gen_enum(variable_type, file, name, indent)
+    elif kind == "proc":
+        gen_proc(variable_type, name, False, file, indent)
+        file.write("\n")
+    else: 
+        gen_typedef(variable_type, file, name, indent)
 
 # step through the main module objects
 # procedures are written to a temp_block thats written once the module is stepped through
@@ -385,15 +442,33 @@ def iterate_object(obj, file, shared_block):
     temp_block.close()
 
     if kind == "proc":
-        gen_proc(obj, shared_block, 1)
+        proc_name = obj["name"]
+        gen_proc(obj, proc_name, True, shared_block, 1)
     elif kind == "typename":
         gen_typename_object(obj, file, 0)
+
+# write package info and types
+def write_package(file):
+    file.write("package orca\n\n")
+    file.write("import \"core:c\"\n\n")
+    file.write("char :: c.char\n")
+
+    # currently missing in the api.json
+    file.write("window :: distinct u64\n")
+
+    ## currently missing in the api.json
+    file.write("""pool :: struct {
+\tarena: arena,
+\tfreeList: list,
+\tblockSize: u64,
+}\n""")
 
 if __name__ == "__main__":
     with open("api.json", "r") as api_file:
         api_desc = json.load(api_file)
 
     with open("orca.odin", "w") as odin_file:
+        write_package(odin_file)
         temp_block = io.StringIO("")
         
         for module in api_desc:
