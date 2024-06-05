@@ -1,14 +1,20 @@
+//+build orca
 package orca
 
 import "core:c"
 
 char :: c.char
+
+// currently missing in the api.json
 window :: distinct u64
+    
+// currently missing in the api.json
 pool :: struct {
 	arena: arena,
 	freeList: list,
 	blockSize: u64,
 }
+
 UNICODE_BASIC_LATIN :: unicode_range { 0x0000, 127 }
 UNICODE_C1_CONTROLS_AND_LATIN_1_SUPPLEMENT :: unicode_range { 0x0080, 127 }
 UNICODE_LATIN_EXTENDED_A :: unicode_range { 0x0100, 127 }
@@ -167,7 +173,7 @@ vec4 :: [4]f32
 mat2x3 :: #row_major matrix[2, 3]f32
 
 // An axis-aligned rectangle.
-rect :: [4]f32
+rect :: struct { x, y, w, h: f32 }
 
 @(default_calling_convention="c", link_prefix="oc_")
 foreign {
@@ -211,13 +217,13 @@ foreign {
 	
 	This function should not be called directly by user code, which should use the `OC_ABORT` macro instead, as the macro takes care of filling in the source location parameters of the function.
 	*/
-	abort_ext :: proc(file: cstring, function: cstring, line: i32, fmt: cstring, #c_vararg args: ..any) ---
+	abort_ext :: proc(file: cstring, function: cstring, line: i32, fmt: cstring, #c_vararg args: ..any) -> ! ---
 	/*
 	Tigger a failed assertion. This aborts the application, showing the failed assertion and an error message.
 	
 	This function should not be called directly by user code, which should use the `OC_ASSERT` macro instead. The macro checks the assert condition and calls the function if it is false. It also takes care of filling in the source location parameters of the function.
 	*/
-	assert_fail :: proc(file: cstring, function: cstring, line: i32, src: cstring, fmt: cstring, #c_vararg args: ..any) ---
+	assert_fail :: proc(file: cstring, function: cstring, line: i32, src: cstring, fmt: cstring, #c_vararg args: ..any) -> ! ---
 	// Set the logging verbosity.
 	log_set_level :: proc(level: log_level) ---
 	/*
@@ -377,7 +383,7 @@ str8_list :: struct {
 	len: u64,
 }
 
-str16 :: distinct []rune
+str16 :: distinct []u16
 
 str16_elt :: struct {
 	listElt: list_elt,
@@ -390,7 +396,7 @@ str16_list :: struct {
 	len: u64,
 }
 
-str32 :: distinct []u16
+str32 :: distinct []rune
 
 str32_elt :: struct {
 	listElt: list_elt,
@@ -822,7 +828,7 @@ file_dialog_kind :: enum u32 {
 	OPEN = 1,
 }
 
-file_dialog_flags :: u32
+// file_dialog_flags :: u32
 
 file_dialog_flags :: enum u32 {
 	FILES = 1,
@@ -1060,12 +1066,12 @@ foreign {
 
 @(default_calling_convention="c", link_prefix="oc_")
 foreign {
-	path_slice_directory :: proc(path: str8) -> str8 ---
-	path_slice_filename :: proc(path: str8) -> str8 ---
-	path_split :: proc(arena: ^arena, path: str8) -> str8_list ---
-	path_join :: proc(arena: ^arena, elements: str8_list) -> str8 ---
-	path_append :: proc(arena: ^arena, parent: str8, relPath: str8) -> str8 ---
-	path_is_absolute :: proc(path: str8) -> bool ---
+	// path_slice_directory :: proc(path: str8) -> str8 ---
+	// path_slice_filename :: proc(path: str8) -> str8 ---
+	// path_split :: proc(arena: ^arena, path: str8) -> str8_list ---
+	// path_join :: proc(arena: ^arena, elements: str8_list) -> str8 ---
+	// path_append :: proc(arena: ^arena, parent: str8, relPath: str8) -> str8 ---
+	// path_is_absolute :: proc(path: str8) -> bool ---
 	path_slice_directory :: proc(path: str8) -> str8 ---
 	path_slice_filename :: proc(path: str8) -> str8 ---
 	path_split :: proc(arena: ^arena, path: str8) -> str8_list ---

@@ -1,12 +1,10 @@
 import json
 import io
 
-# logger macros?
-# OC_ABORT?
+# TODO
 # multi pointers for things
-
-# kind: module, typename, union, struct, array, f32, i32, u32, bool, void, char, variadic-param, pointer, namedType
-# kind: enum-constant, macro
+# fix file_dialog_flags typename declaration and deferred set
+# fix duplicate functions 
 
 # exclude oc_* from any string
 def prefix_trim_oc(name):
@@ -85,6 +83,13 @@ def try_gen_doc(obj, file, indent):
     if "doc" in obj:
         gen_doc(obj["doc"], file, indent)
 
+# if a proc begins with abort or assert return true
+def proc_contains_panic(name):
+    if name.startswith("abort") or name.startswith("assert"):
+        return True
+
+    return False
+
 # generate a procedure declation with the parameters and its return type
 def gen_proc(obj, name, write_foreign_finish, file, indent):
     kind = obj["kind"]
@@ -105,9 +110,11 @@ def gen_proc(obj, name, write_foreign_finish, file, indent):
 
     file.write(")")
 
-    # write return type when not void
+    # write return type
     ret = obj["return"]
-    if ret["kind"] != "void":
+    if ret["kind"] == "void" and proc_contains_panic(name):
+        file.write(" -> !")
+    elif ret["kind"] != "void":
         ret_kind = get_inner_kind(ret)
         file.write(f" -> {ret_kind}")
 
@@ -135,8 +142,8 @@ type_builtins = {
     "vec3": "[3]f32",
     "vec2i": "[2]i32",
     "vec4": "[4]f32",
-    "mat2x3": "[2][3]f32", # TODO
-    "rect": "[4]f32",
+    "mat2x3": "[6]f32",
+    "rect": "struct { x, y, w, h: f32 }",
     "color": "[4]f32",
 
     "ui_layout_align": "[2]ui_align",
@@ -147,8 +154,8 @@ type_builtins = {
     
     "utf32": "rune",
     "str8": "string",
-    "str16": "distinct []rune",
-    "str32": "distinct []u16",
+    "str16": "distinct []u16",
+    "str32": "distinct []rune",
 }
 
 # generate a default builtin instead of complex xy or xywh C struct+union pairs
@@ -449,19 +456,24 @@ def iterate_object(obj, file, shared_block):
 
 # write package info and types
 def write_package(file):
-    file.write("package orca\n\n")
-    file.write("import \"core:c\"\n\n")
-    file.write("char :: c.char\n")
+    file.write("""//+build orca
+package orca
 
-    # currently missing in the api.json
-    file.write("window :: distinct u64\n")
+import "core:c"
 
-    ## currently missing in the api.json
-    file.write("""pool :: struct {
+char :: c.char
+
+// currently missing in the api.json
+window :: distinct u64
+    
+// currently missing in the api.json
+pool :: struct {
 \tarena: arena,
 \tfreeList: list,
 \tblockSize: u64,
-}\n""")
+}
+
+""")
 
 def write_unicode_constants(file):
     file.write("""UNICODE_BASIC_LATIN :: unicode_range { 0x0000, 127 }
