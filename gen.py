@@ -1,11 +1,6 @@
 import json
 import io
 
-# TODO
-# multi pointers for things
-# fix file_dialog_flags typename declaration and deferred set
-# fix duplicate functions 
-
 # exclude oc_* from any string
 def prefix_trim_oc(name):
     if name.startswith("_oc_"): # some enums have this
@@ -235,13 +230,60 @@ def check_enum_name_decimal(name):
 
     return name
 
+# enums that should be converted to bit_set backing enums for nicer odin interop
+# [0] = the wanted enum name
+# [1] = the output bit_set name (may be used in parameters or fields types)
+# [2] = bit_set sizing (can't rely on the enum size)
+enum_bit_sets_list = {
+    "keymod_flags": ["keymod_flag", "keymod_flags", "u32"],
+    "file_dialog_flags": ["file_dialog_flag", "file_dialog_flags", "u32"],
+    "file_open_flags_enum": ["file_open_flag", "file_open_flags", "u16"],
+    "file_access_enum": ["file_access_flag", "file_access", "u16"],
+    "file_perm_enum": ["file_perm_flag", "file_perm", "u16"],
+    "ui_status_enum": ["ui_status_flag", "ui_status", "u8"],
+    "ui_flags": ["ui_flag", "ui_flags", "u32"],
+}
+
+def gen_enum_bit_set_combo(obj, file, name, indent):
+    is_bitset = name in enum_bit_sets_list
+    if not is_bitset:
+        return False
+
+    indent_str = indent_string(indent)
+    change = enum_bit_sets_list[name]
+    enum_name = change[0]
+    bitset_name = change[1]
+    enum_sizing = change[2] # gotta use the same sizing for both, the origin enum
+    file.write(f"{indent_str}{enum_name} :: enum {enum_sizing} {{\n")
+
+    # do not write out the value names of bit_set backing enum values
+    # also drop the NONE = 0 value
+    fields_indent_str = indent_string(indent + 1)
+    for const in obj["constants"]:
+        real_name = const["name"]
+        const_name = simplify_enum_name(real_name)
+
+        if const_name == "NONE":
+            continue
+
+        file.write(f"{fields_indent_str}{const_name},\n")
+
+    file.write(f"{indent_str}}}\n")
+    file.write(f"{indent_str}{bitset_name} :: bit_set[{enum_name}; {enum_sizing}]\n\n")
+    return True
+
 # generates an odin enum e.g. log_level :: enum { ... }
 def gen_enum(obj, file, name, indent):
     indent_str = indent_string(indent)
     singleton = len(obj["constants"]) <= 1 or name == ""
 
+    name = get_enum_name(name)
+
+    if gen_enum_bit_set_combo(obj, file, name, indent):
+        return
+
     # write enum description when not a singleton
-    if not singleton:
+    elif not singleton:
         enum_sizing = get_enum_sizing(obj)
         file.write(f"{indent_str}{name} :: enum {enum_sizing} {{\n")
         fields_indent_str = indent_string(indent + 1)
@@ -287,9 +329,8 @@ reserved_field_names = {
 
 # insert a _ before an identifier that may be invalid
 def check_field_name(name):
-    for reserved in reserved_field_names:
-        if reserved == name:
-            return "_" + name
+    if name in reserved_field_names:
+        return "_" + name
 
     return name
 
@@ -392,9 +433,42 @@ def gen_struct(obj, file, name, indent):
     gen_struct_fields(obj, file, indent + 1)
     file.write(f"{indent_str}}}")
 
+# constants to rename since their const version got removed
+enum_rename_list = {
+    "io_op_enum": "io_op",
+    "io_error_enum": "io_error",
+}
+
+# gets the default enum name or a replacement
+def get_enum_name(name):
+    if name in enum_rename_list:
+        return enum_rename_list[name]
+
+    return name
+
+# specific typedefs to ignore generating, since they might be generated through enums separately
+# io_op <- io_op_enum
+# io_error <- io_error_enum
+typedef_ignore_list = {
+    "io_op",
+    "io_error", 
+    "file_dialog_flags", # duplicate
+    
+    # will be bit_set enums, see gen_enum_bit_set_combo
+    "file_open_flags",
+    "file_access",
+    "file_perm",
+    "ui_status",
+}
+
+# generates an odin constant
 def gen_typedef(obj, file, name, indent):
     indent_str = indent_string(indent)
     typedef_kind = obj["kind"]
+
+    if name in typedef_ignore_list:
+        return
+
     file.write(f"{indent_str}{name} :: {typedef_kind}\n\n")
 
 # main object of the api which could be struct, union, enums or macros (unsupported)

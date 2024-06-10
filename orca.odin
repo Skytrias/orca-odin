@@ -877,14 +877,14 @@ key_code :: enum u32 {
 	COUNT = 349,
 }
 
-keymod_flags :: enum u32 {
-	NONE = 0,
-	ALT = 1,
-	SHIFT = 2,
-	CTRL = 4,
-	CMD = 8,
-	MAIN_MODIFIER = 16,
+keymod_flag :: enum u32 {
+	ALT,
+	SHIFT,
+	CTRL,
+	CMD,
+	MAIN_MODIFIER,
 }
+keymod_flags :: bit_set[keymod_flag; u32]
 
 // A code identifying a mouse button.
 mouse_button :: enum u32 {
@@ -968,19 +968,14 @@ file_dialog_kind :: enum u32 {
 }
 
 // A type for flags describing various file dialog options.
-// file_dialog_flags :: u32
-
 // File dialog flags.
-file_dialog_flags :: enum u32 {
-	// This dialog allows selecting files.
-	FILES = 1,
-	// This dialog allows selecting directories.
-	DIRECTORIES = 2,
-	// This dialog allows selecting multiple items.
-	MULTIPLE = 4,
-	// This dialog allows creating directories.
-	CREATE_DIRECTORIES = 8,
+file_dialog_flag :: enum u32 {
+	FILES,
+	DIRECTORIES,
+	MULTIPLE,
+	CREATE_DIRECTORIES,
 }
+file_dialog_flags :: bit_set[file_dialog_flag; u32]
 
 // A structure describing a file dialog.
 file_dialog_desc :: struct {
@@ -1044,37 +1039,23 @@ foreign {
 file :: distinct u64
 
 // The type of file open flags describing file open options.
-file_open_flags :: u16
-
 // Flags for the `oc_file_open()` function.
-file_open_flags_enum :: enum u32 {
-	// No options.
-	NONE = 0,
-	// Open the file in 'append' mode. All writes append data at the end of the file.
-	APPEND = 2,
-	// Truncate the file to 0 bytes when opening.
-	TRUNCATE = 4,
-	// Create the file if it does not exist.
-	CREATE = 8,
-	// If the file is a symlink, open the symlink itself instead of following it.
-	SYMLINK = 16,
-	// If the file is a symlink, the call to open will fail.
-	NO_FOLLOW = 32,
-	// Reserved.
-	RESTRICT = 64,
+file_open_flag :: enum u16 {
+	APPEND,
+	TRUNCATE,
+	CREATE,
+	SYMLINK,
+	NO_FOLLOW,
+	RESTRICT,
 }
-
-file_access :: u16
+file_open_flags :: bit_set[file_open_flag; u16]
 
 // This enum describes the access permissions of a file handle.
-file_access_enum :: enum u32 {
-	// The file handle has no access permissions.
-	NONE = 0,
-	// The file handle can be used for reading from the file.
-	READ = 2,
-	// The file handle can be used for writing to the file.
-	WRITE = 4,
+file_access_flag :: enum u16 {
+	READ,
+	WRITE,
 }
+file_access :: bit_set[file_access_flag; u16]
 
 // This enum is used in `oc_file_seek()` to specify the starting point of the seek operation.
 file_whence :: enum u32 {
@@ -1090,10 +1071,8 @@ file_whence :: enum u32 {
 io_req_id :: u64
 
 // A type used to identify I/O operations.
-io_op :: u32
-
 // This enum declares all I/O operations.
-io_op_enum :: enum u32 {
+io_op :: enum u32 {
 	// ['Open a file at a path relative to a given root directory.', '', "    - `handle` is the handle to the root directory. If it is nil, the application's default directory is used.", '    - `size` is the size of the path, in bytes.', '    - `buffer` points to an array containing the path of the file to open, relative to the directory identified by `handle`.', '    - `open` contains the permissions and flags for the open operation.']
 	OPEN_AT = 0,
 	// ['Close a file handle.', '', '    - `handle` is the handle to close.']
@@ -1138,10 +1117,8 @@ io_req :: struct {
 }
 
 // A type identifying an I/O error.
-io_error :: i32
-
 // This enum declares all I/O error values.
-io_error_enum :: enum u32 {
+io_error :: enum u32 {
 	// No error.
 	OK = 0,
 	// An unexpected error happened.
@@ -1225,22 +1202,21 @@ file_type :: enum u32 {
 }
 
 // A type describing file permissions.
-file_perm :: u16
-
-file_perm_enum :: enum u32 {
-	OTHER_EXEC = 1,
-	OTHER_WRITE = 2,
-	OTHER_READ = 4,
-	GROUP_EXEC = 8,
-	GROUP_WRITE = 16,
-	GROUP_READ = 32,
-	OWNER_EXEC = 64,
-	OWNER_WRITE = 128,
-	OWNER_READ = 256,
-	STICKY_BIT = 512,
-	SET_GID = 1024,
-	SET_UID = 2048,
+file_perm_flag :: enum u16 {
+	OTHER_EXEC,
+	OTHER_WRITE,
+	OTHER_READ,
+	GROUP_EXEC,
+	GROUP_WRITE,
+	GROUP_READ,
+	OWNER_EXEC,
+	OWNER_WRITE,
+	OWNER_READ,
+	STICKY_BIT,
+	SET_GID,
+	SET_UID,
 }
+file_perm :: bit_set[file_perm_flag; u16]
 
 datestamp :: struct {
 	seconds: i64,
@@ -1880,15 +1856,13 @@ ui_selector_kind :: enum u32 {
 	KEY = 5,
 }
 
-ui_status :: u8
-
-ui_status_enum :: enum u32 {
-	NONE = 0,
-	HOVER = 2,
-	HOT = 4,
-	ACTIVE = 8,
-	DRAGGING = 16,
+ui_status_flag :: enum u8 {
+	HOVER,
+	HOT,
+	ACTIVE,
+	DRAGGING,
 }
+ui_status :: bit_set[ui_status_flag; u8]
 
 ui_selector_op :: enum u32 {
 	DESCENDANT = 0,
@@ -1975,24 +1949,24 @@ ui_sig :: struct {
 
 ui_box_draw_proc :: proc(arg0: ^ui_box, arg1: rawptr)
 
-ui_flags :: enum u32 {
-	NONE = 0,
-	CLICKABLE = 1,
-	SCROLL_WHEEL_X = 2,
-	SCROLL_WHEEL_Y = 4,
-	BLOCK_MOUSE = 8,
-	HOT_ANIMATION = 16,
-	ACTIVE_ANIMATION = 32,
-	OVERFLOW_ALLOW_X = 64,
-	OVERFLOW_ALLOW_Y = 128,
-	CLIP = 256,
-	DRAW_BACKGROUND = 512,
-	DRAW_FOREGROUND = 1024,
-	DRAW_BORDER = 2048,
-	DRAW_TEXT = 4096,
-	DRAW_PROC = 8192,
-	OVERLAY = 65536,
+ui_flag :: enum u32 {
+	CLICKABLE,
+	SCROLL_WHEEL_X,
+	SCROLL_WHEEL_Y,
+	BLOCK_MOUSE,
+	HOT_ANIMATION,
+	ACTIVE_ANIMATION,
+	OVERFLOW_ALLOW_X,
+	OVERFLOW_ALLOW_Y,
+	CLIP,
+	DRAW_BACKGROUND,
+	DRAW_FOREGROUND,
+	DRAW_BORDER,
+	DRAW_TEXT,
+	DRAW_PROC,
+	OVERLAY,
 }
+ui_flags :: bit_set[ui_flag; u32]
 
 MAX_INPUT_CHAR_PER_FRAME :: 64
 
