@@ -970,9 +970,13 @@ file_dialog_kind :: enum u32 {
 // A type for flags describing various file dialog options.
 // File dialog flags.
 file_dialog_flag :: enum u32 {
+	// This dialog allows selecting files.
 	FILES,
+	// This dialog allows selecting directories.
 	DIRECTORIES,
+	// This dialog allows selecting multiple items.
 	MULTIPLE,
+	// This dialog allows creating directories.
 	CREATE_DIRECTORIES,
 }
 file_dialog_flags :: bit_set[file_dialog_flag; u32]
@@ -1041,18 +1045,26 @@ file :: distinct u64
 // The type of file open flags describing file open options.
 // Flags for the `oc_file_open()` function.
 file_open_flag :: enum u16 {
+	// Open the file in 'append' mode. All writes append data at the end of the file.
 	APPEND,
+	// Truncate the file to 0 bytes when opening.
 	TRUNCATE,
+	// Create the file if it does not exist.
 	CREATE,
+	// If the file is a symlink, open the symlink itself instead of following it.
 	SYMLINK,
+	// If the file is a symlink, the call to open will fail.
 	NO_FOLLOW,
+	// Reserved.
 	RESTRICT,
 }
 file_open_flags :: bit_set[file_open_flag; u16]
 
 // This enum describes the access permissions of a file handle.
 file_access_flag :: enum u16 {
+	// The file handle can be used for reading from the file.
 	READ,
+	// The file handle can be used for writing to the file.
 	WRITE,
 }
 file_access :: bit_set[file_access_flag; u16]

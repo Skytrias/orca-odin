@@ -266,6 +266,11 @@ def gen_enum_bit_set_combo(obj, file, name, indent):
         if const_name == "NONE":
             continue
 
+        # write docs if they exist
+        if "doc" in const:
+            const_docs = const["doc"]
+            file.write(f"{fields_indent_str}// {const_docs}\n")
+
         file.write(f"{fields_indent_str}{const_name},\n")
 
     file.write(f"{indent_str}}}\n")
