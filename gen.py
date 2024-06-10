@@ -28,7 +28,7 @@ def get_type_name_or_kind(obj):
 # try using the object kind
 # if kind is namedType -> get the namedType name
 # if its a pointer do a pointer type or rawptr
-def get_inner_kind(obj):
+def get_inner_kind(obj, field_name):
     result = get_type_name_or_kind(obj)
     output = result
 
@@ -40,7 +40,11 @@ def get_inner_kind(obj):
         if result == "void":
             output = "rawptr"
         else:
-            output = "^" + result
+            # keep "buffers" as multipointers to their type
+            if field_name == "buffer":
+                output = "[^]" + result
+            else:
+                output = "^" + result
 
         # turn ^char to cstring
         if output == "^char":
@@ -57,13 +61,16 @@ def gen_param(obj, file):
     name = check_field_name(obj["name"]) # can be ... !
     
     # convert variadic-param to odin #c_vararg args: ..any
-    variable_output = get_inner_kind(obj["type"])
+    variable_output = get_inner_kind(obj["type"], name)
     if name == "..." or variable_output == "va_list":
         file.write("#c_vararg args: ..any")
         return
 
     if name == "context": # context is a keyword in odin
         name = "_context" 
+    
+    if name == "buffer" and variable_output == "cstring":
+        variable_output = "[^]char"
 
     file.write(f"{name}: {variable_output}")
 
@@ -115,7 +122,7 @@ def gen_proc(obj, name, write_foreign_finish, file, indent):
     if ret["kind"] == "void" and proc_contains_panic(name):
         file.write(" -> !")
     elif ret["kind"] != "void":
-        ret_kind = get_inner_kind(ret)
+        ret_kind = get_inner_kind(ret, "")
         file.write(f" -> {ret_kind}")
 
     # finish
@@ -295,7 +302,7 @@ def gen_union_fields(obj, file, indent):
     indent_str = indent_string(indent)
     for field in obj["fields"]:
         field_name = check_field_name(field["name"])
-        field_kind = get_inner_kind(field["type"])
+        field_kind = get_inner_kind(field["type"], field_name)
 
         # name can be empty
         if field_name == "":
@@ -317,7 +324,7 @@ def gen_fixed_array(obj, file, field_name, indent):
     indent_str = indent_string(indent)
     variable_type = obj["type"]
     array_size = variable_type["count"]
-    array_type = get_inner_kind(variable_type["type"])
+    array_type = get_inner_kind(variable_type["type"], "")
     file.write(f"{indent_str}{field_name}: [{array_size}]{array_type},\n")
 
 # write struct fields from objects
@@ -325,7 +332,7 @@ def gen_struct_fields(obj, file, indent):
     indent_str = indent_string(indent)
     for field in obj["fields"]:
         field_name = check_field_name(field["name"])
-        variable_output = get_inner_kind(field["type"])
+        variable_output = get_inner_kind(field["type"], field_name)
 
         # write docs if they exist
         if "doc" in field:

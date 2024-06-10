@@ -434,11 +434,11 @@ str32_list :: struct {
 @(default_calling_convention="c", link_prefix="oc_")
 foreign {
 	// Make a string from a bytes buffer and a length.
-	str8_from_buffer :: proc(len: u64, buffer: cstring) -> str8 ---
+	str8_from_buffer :: proc(len: u64, buffer: [^]char) -> str8 ---
 	// Make a string from a slice of another string. The resulting string designates some subsequence of the input string.
 	str8_slice :: proc(s: str8, start: u64, end: u64) -> str8 ---
 	// Pushes a copy of a buffer to an arena, and makes a string refering to that copy.
-	str8_push_buffer :: proc(arena: ^arena, len: u64, buffer: cstring) -> str8 ---
+	str8_push_buffer :: proc(arena: ^arena, len: u64, buffer: [^]char) -> str8 ---
 	// Pushes a copy of a C null-terminated string to an arena, and makes a string referring to that copy.
 	str8_push_cstring :: proc(arena: ^arena, str: cstring) -> str8 ---
 	// Copy the contents of a string on an arena and make a new string referring to the copied bytes.
@@ -468,11 +468,11 @@ foreign {
 	*/
 	str8_split :: proc(arena: ^arena, str: str8, separators: str8_list) -> str8_list ---
 	// Make an `oc_str16` string from a buffer of 16-bit characters.
-	str16_from_buffer :: proc(len: u64, buffer: ^u16) -> str16 ---
+	str16_from_buffer :: proc(len: u64, buffer: [^]u16) -> str16 ---
 	// Make an `oc_str16` string from a slice of another `oc_str16` string.
 	str16_slice :: proc(s: str16, start: u64, end: u64) -> str16 ---
 	// Copy the content of a 16-bit character buffer on an arena and make a new `oc_str16` referencing the copied contents.
-	str16_push_buffer :: proc(arena: ^arena, len: u64, buffer: ^u16) -> str16 ---
+	str16_push_buffer :: proc(arena: ^arena, len: u64, buffer: [^]u16) -> str16 ---
 	// Copy the contents of an `oc_str16` string and make a new string referencing the copied contents.
 	str16_push_copy :: proc(arena: ^arena, s: str16) -> str16 ---
 	// Copy a slice of an `oc_str16` string an make a new string referencing the copies contents.
@@ -488,11 +488,11 @@ foreign {
 	*/
 	str16_split :: proc(arena: ^arena, str: str16, separators: str16_list) -> str16_list ---
 	// Make an `oc_str32` string from a buffer of 32-bit characters.
-	str32_from_buffer :: proc(len: u64, buffer: ^u32) -> str32 ---
+	str32_from_buffer :: proc(len: u64, buffer: [^]u32) -> str32 ---
 	// Make an `oc_str32` string from a slice of another `oc_str32` string.
 	str32_slice :: proc(s: str32, start: u64, end: u64) -> str32 ---
 	// Copy the content of a 32-bit character buffer on an arena and make a new `oc_str32` referencing the copied contents.
-	str32_push_buffer :: proc(arena: ^arena, len: u64, buffer: ^u32) -> str32 ---
+	str32_push_buffer :: proc(arena: ^arena, len: u64, buffer: [^]u32) -> str32 ---
 	// Copy the contents of an `oc_str32` string and make a new string referencing the copied contents.
 	str32_push_copy :: proc(arena: ^arena, s: str32) -> str32 ---
 	// Copy a slice of an `oc_str32` string an make a new string referencing the copies contents.
@@ -968,7 +968,7 @@ file_dialog_kind :: enum u32 {
 }
 
 // A type for flags describing various file dialog options.
-file_dialog_flags :: u32
+// file_dialog_flags :: u32
 
 // File dialog flags.
 file_dialog_flags :: enum u32 {
@@ -1123,7 +1123,7 @@ io_req :: struct {
 	// A size indicating the capacity of the buffer pointed to by `buffer`, in bytes.
 	size: u64,
 	_: struct #raw_union {
-		buffer: cstring,
+		buffer: [^]char,
 		unused: u64,
 	},
 	_: struct #raw_union {
@@ -1276,9 +1276,9 @@ foreign {
 	// Set the current position in a file.
 	file_seek :: proc(file: file, offset: i64, whence: file_whence) -> i64 ---
 	// Write data to a file.
-	file_write :: proc(file: file, size: u64, buffer: cstring) -> u64 ---
+	file_write :: proc(file: file, size: u64, buffer: [^]char) -> u64 ---
 	// Read from a file.
-	file_read :: proc(file: file, size: u64, buffer: cstring) -> u64 ---
+	file_read :: proc(file: file, size: u64, buffer: [^]char) -> u64 ---
 	// Get the last error on a file handle.
 	file_last_error :: proc(handle: file) -> io_error ---
 	file_get_status :: proc(file: file) -> file_status ---
