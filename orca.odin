@@ -370,77 +370,142 @@ foreign {
 // String slices and string lists.
 ////////////////////////////////////////////////////////////////////////////////
 
+// A type representing a string of bytes.
 str8 :: string
 
+// A type representing an element of a string list.
 str8_elt :: struct {
+	// The string element is linked into its parent string list through this field.
 	listElt: list_elt,
+	// The string for this element.
 	_string: str8,
 }
 
+// A type representing a string list.
 str8_list :: struct {
+	// A linked-list of `oc_str8_elt`.
 	list: list,
+	// The number of elements in `list`.
 	eltCount: u64,
+	// The total length of the string list, which is the sum of the lengths over all elements.
 	len: u64,
 }
 
+// A type describing a string of 16-bits characters (typically used for UTF-16).
 str16 :: distinct []u16
 
+// A type representing an element of an `oc_str16` list.
 str16_elt :: struct {
+	// The string element is linked into its parent string list through this field.
 	listElt: list_elt,
+	// The string for this element.
 	_string: str16,
 }
 
 str16_list :: struct {
+	// A linked-list of `oc_str16_elt`.
 	list: list,
+	// The number of elements in `list`.
 	eltCount: u64,
+	// The total length of the string list, which is the sum of the lengths over all elements.
 	len: u64,
 }
 
+// A type describing a string of 32-bits characters (typically used for UTF-32 codepoints).
 str32 :: distinct []rune
 
+// A type representing an element of an `oc_str32` list.
 str32_elt :: struct {
+	// The string element is linked into its parent string list through this field.
 	listElt: list_elt,
+	// The string for this element.
 	_string: str32,
 }
 
 str32_list :: struct {
+	// A linked-list of `oc_str32_elt`.
 	list: list,
+	// The number of elements in `list`.
 	eltCount: u64,
+	// The total length of the string list, which is the sum of the lengths over all elements.
 	len: u64,
 }
 
 @(default_calling_convention="c", link_prefix="oc_")
 foreign {
+	// Make a string from a bytes buffer and a length.
 	str8_from_buffer :: proc(len: u64, buffer: cstring) -> str8 ---
+	// Make a string from a slice of another string. The resulting string designates some subsequence of the input string.
 	str8_slice :: proc(s: str8, start: u64, end: u64) -> str8 ---
+	// Pushes a copy of a buffer to an arena, and makes a string refering to that copy.
 	str8_push_buffer :: proc(arena: ^arena, len: u64, buffer: cstring) -> str8 ---
+	// Pushes a copy of a C null-terminated string to an arena, and makes a string referring to that copy.
 	str8_push_cstring :: proc(arena: ^arena, str: cstring) -> str8 ---
+	// Copy the contents of a string on an arena and make a new string referring to the copied bytes.
 	str8_push_copy :: proc(arena: ^arena, s: str8) -> str8 ---
+	// Make a copy of a string slice. This function copies a subsequence of the input string onto an arena, and returns a new string referring to the copied content.
 	str8_push_slice :: proc(arena: ^arena, s: str8, start: u64, end: u64) -> str8 ---
+	// Build a string from a null-terminated format string and a variadic argument list, similar to `vasprintf()`.
 	str8_pushfv :: proc(arena: ^arena, format: cstring, #c_vararg args: ..any) -> str8 ---
+	// Build a string from a null-terminated format string and variadic arguments, similar to `asprintf()`.
 	str8_pushf :: proc(arena: ^arena, format: cstring, #c_vararg args: ..any) -> str8 ---
+	// Lexicographically compare the contents of two strings.
 	str8_cmp :: proc(s1: str8, s2: str8) -> i32 ---
+	// Create a null-terminated C-string from an `oc_str8` string.
 	str8_to_cstring :: proc(arena: ^arena, _string: str8) -> cstring ---
+	// Push a string element to the back of a string list. This creates a `oc_str8_elt` element referring to the contents of the input string, and links that element at the end of the string list.
 	str8_list_push :: proc(arena: ^arena, list: ^str8_list, str: str8) ---
+	// Build a string from a null-terminated format string an variadic arguments, and append it to a string list.
 	str8_list_pushf :: proc(arena: ^arena, list: ^str8_list, format: cstring, #c_vararg args: ..any) ---
-	str8_list_collate :: proc(arena: ^arena, list: str8_list, prefix: str8, separator: str8, postfix: str8) -> str8 ---
+	// Build a string by combining the elements of a string list with a prefix, a suffix, and separators.
+	str8_list_collate :: proc(arena: ^arena, list: str8_list, prefix: str8, separator: str8, suffix: str8) -> str8 ---
+	// Build a string by joining the elements of a string list.
 	str8_list_join :: proc(arena: ^arena, list: str8_list) -> str8 ---
+	/*
+	Split a list into a string list according to separators.
+	
+	No string copies are made. The elements of the resulting string list refer to subsequences of the input string.
+	*/
 	str8_split :: proc(arena: ^arena, str: str8, separators: str8_list) -> str8_list ---
+	// Make an `oc_str16` string from a buffer of 16-bit characters.
 	str16_from_buffer :: proc(len: u64, buffer: ^u16) -> str16 ---
+	// Make an `oc_str16` string from a slice of another `oc_str16` string.
 	str16_slice :: proc(s: str16, start: u64, end: u64) -> str16 ---
+	// Copy the content of a 16-bit character buffer on an arena and make a new `oc_str16` referencing the copied contents.
 	str16_push_buffer :: proc(arena: ^arena, len: u64, buffer: ^u16) -> str16 ---
+	// Copy the contents of an `oc_str16` string and make a new string referencing the copied contents.
 	str16_push_copy :: proc(arena: ^arena, s: str16) -> str16 ---
+	// Copy a slice of an `oc_str16` string an make a new string referencing the copies contents.
 	str16_push_slice :: proc(arena: ^arena, s: str16, start: u64, end: u64) -> str16 ---
+	// Push a string element to the back of a string list. This creates a `oc_str16_elt` element referring to the contents of the input string, and links that element at the end of the string list.
 	str16_list_push :: proc(arena: ^arena, list: ^str16_list, str: str16) ---
+	// Build a string by joining the elements of a string list.
 	str16_list_join :: proc(arena: ^arena, list: str16_list) -> str16 ---
+	/*
+	Split a list into a string list according to separators.
+	
+	No string copies are made. The elements of the resulting string list refer to subsequences of the input string.
+	*/
 	str16_split :: proc(arena: ^arena, str: str16, separators: str16_list) -> str16_list ---
+	// Make an `oc_str32` string from a buffer of 32-bit characters.
 	str32_from_buffer :: proc(len: u64, buffer: ^u32) -> str32 ---
+	// Make an `oc_str32` string from a slice of another `oc_str32` string.
 	str32_slice :: proc(s: str32, start: u64, end: u64) -> str32 ---
+	// Copy the content of a 32-bit character buffer on an arena and make a new `oc_str32` referencing the copied contents.
 	str32_push_buffer :: proc(arena: ^arena, len: u64, buffer: ^u32) -> str32 ---
+	// Copy the contents of an `oc_str32` string and make a new string referencing the copied contents.
 	str32_push_copy :: proc(arena: ^arena, s: str32) -> str32 ---
+	// Copy a slice of an `oc_str32` string an make a new string referencing the copies contents.
 	str32_push_slice :: proc(arena: ^arena, s: str32, start: u64, end: u64) -> str32 ---
+	// Push a string element to the back of a string list. This creates a `oc_str32_elt` element referring to the contents of the input string, and links that element at the end of the string list.
 	str32_list_push :: proc(arena: ^arena, list: ^str32_list, str: str32) ---
+	// Build a string by joining the elements of a string list.
 	str32_list_join :: proc(arena: ^arena, list: str32_list) -> str32 ---
+	/*
+	Split a list into a string list according to separators.
+	
+	No string copies are made. The elements of the resulting string list refer to subsequences of the input string.
+	*/
 	str32_split :: proc(arena: ^arena, str: str32, separators: str32_list) -> str32_list ---
 }
 
@@ -448,32 +513,51 @@ foreign {
 // UTF8 encoding/decoding.
 ////////////////////////////////////////////////////////////////////////////////
 
+// A unicode codepoint.
 utf32 :: rune
 
+// A type representing the result of decoding of utf8-encoded codepoint.
 utf8_dec :: struct {
+	// The decoded codepoint.
 	codepoint: utf32,
+	// The size of the utf8 sequence encoding that codepoint.
 	size: u32,
 }
 
+// A type representing a contiguous range of unicode codepoints.
 unicode_range :: struct {
+	// The first codepoint of the range.
 	firstCodePoint: utf32,
+	// The number of codepoints in the range.
 	count: u32,
 }
 
 @(default_calling_convention="c", link_prefix="oc_")
 foreign {
+	// Get the size of a utf8-encoded codepoint for the first byte of the encoded sequence.
 	utf8_size_from_leading_char :: proc(leadingChar: char) -> u32 ---
+	// Get the size of the utf8 encoding of a codepoint.
 	utf8_codepoint_size :: proc(codePoint: utf32) -> u32 ---
 	utf8_codepoint_count_for_string :: proc(_string: str8) -> u64 ---
+	// Get the length of the utf8 encoding of a sequence of unicode codepoints.
 	utf8_byte_count_for_codepoints :: proc(codePoints: str32) -> u64 ---
+	// Get the offset of the next codepoint after a given offset, in a utf8 encoded string.
 	utf8_next_offset :: proc(_string: str8, byteOffset: u64) -> u64 ---
+	// Get the offset of the previous codepoint before a given offset, in a utf8 encoded string.
 	utf8_prev_offset :: proc(_string: str8, byteOffset: u64) -> u64 ---
+	// Decode a utf8 encoded codepoint.
 	utf8_decode :: proc(_string: str8) -> utf8_dec ---
+	// Decode a codepoint at a given offset in a utf8 encoded string.
 	utf8_decode_at :: proc(_string: str8, offset: u64) -> utf8_dec ---
+	// Encode a unicode codepoint into a utf8 sequence.
 	utf8_encode :: proc(dst: cstring, codePoint: utf32) -> str8 ---
+	// Decode a utf8 string to a string of unicode codepoints using memory passed by the caller.
 	utf8_to_codepoints :: proc(maxCount: u64, backing: ^utf32, _string: str8) -> str32 ---
+	// Encode a string of unicode codepoints into a utf8 string using memory passed by the caller.
 	utf8_from_codepoints :: proc(maxBytes: u64, backing: cstring, codePoints: str32) -> str8 ---
+	// Decode a utf8 encoded string to a string of unicode codepoints using an arena.
 	utf8_push_to_codepoints :: proc(arena: ^arena, _string: str8) -> str32 ---
+	// Encode a string of unicode codepoints into a utf8 string using an arena.
 	utf8_push_from_codepoints :: proc(arena: ^arena, codePoints: str32) -> str8 ---
 }
 
@@ -485,36 +569,63 @@ foreign {
 // Application events.
 ////////////////////////////////////////////////////////////////////////////////
 
+// This enum defines the type events that can be sent to the application by the runtime. This determines which member of the `oc_event` union field is active.
 event_type :: enum u32 {
+	// No event. That could be used simply to wake up the application.
 	NONE = 0,
+	// A modifier key event. This event is sent when a key such as <kbd>Alt</kbd>, <kbd>Control</kbd>, <kbd>Command</kbd> or <kbd>Shift</kbd> are pressed, released, or repeated. The `key` field contains the event's details.
 	KEYBOARD_MODS = 1,
+	// A key event. This event is sent when a normal key is pressed, released, or repeated. The `key` field contains the event's details.
 	KEYBOARD_KEY = 2,
+	// A character input event. This event is sent when an input character is produced by the keyboard. The `character` field contains the event's details.
 	KEYBOARD_CHAR = 3,
+	// A mouse button event. This is event sent when one of the mouse buttons is pressed, released, or clicked. The `key` field contains the event's details.
 	MOUSE_BUTTON = 4,
+	// A mouse move event. This is event sent when the mouse is moved. The `mouse` field contains the event's details.
 	MOUSE_MOVE = 5,
+	// A mouse wheel event. This is event sent when the mouse wheel is moved (or when a trackpad is scrolled). The `mouse` field contains the event's details.
 	MOUSE_WHEEL = 6,
+	// A mouse enter event. This event is sent when the mouse enters the application's window. The `mouse` field contains the event's details.
 	MOUSE_ENTER = 7,
+	// A mouse leave event. This event is sent when the mouse leaves the application's window.
 	MOUSE_LEAVE = 8,
+	// A clipboard paste event. This event is sent when the user uses the paste shortcut while the application window has focus.
 	CLIPBOARD_PASTE = 9,
+	// A resize event. This event is sent when the application's window is resized. The `move` field contains the event's details.
 	WINDOW_RESIZE = 10,
+	// A move event. This event is sent when the window is moved. The `move` field contains the event's details.
 	WINDOW_MOVE = 11,
+	// A focus event. This event is sent when the application gains focus.
 	WINDOW_FOCUS = 12,
+	// An unfocus event. This event is sent when the application looses focus.
 	WINDOW_UNFOCUS = 13,
+	// A hide event. This event is sent when the application's window is hidden or minimized.
 	WINDOW_HIDE = 14,
+	// A show event. This event is sent when the application's window is shown or de-minimized.
 	WINDOW_SHOW = 15,
+	// A close event. This event is sent when the window is about to be closed.
 	WINDOW_CLOSE = 16,
+	// A path drop event. This event is sent when the user drops files onto the application's window. The `paths` field contains the event's details.
 	PATHDROP = 17,
+	// A frame event. This event is sent when the application should render a frame.
 	FRAME = 18,
+	// A quit event. This event is sent when the application has been requested to quit.
 	QUIT = 19,
 }
 
+// This enum describes the actions that can happen to a key.
 key_action :: enum u32 {
+	// No action happened on that key.
 	NO_ACTION = 0,
+	// The key was pressed.
 	PRESS = 1,
+	// The key was released.
 	RELEASE = 2,
+	// The key was maintained pressed at least for the system's key repeat period.
 	REPEAT = 3,
 }
 
+// A code representing a key's physical location. This is independent of the system's keyboard layout.
 scan_code :: enum u32 {
 	UNKNOWN = 0,
 	SPACE = 32,
@@ -640,6 +751,7 @@ scan_code :: enum u32 {
 	COUNT = 349,
 }
 
+// A code identifying a key. The physical location of the key corresponding to a given key code depends on the system's keyboard layout.
 key_code :: enum u32 {
 	UNKNOWN = 0,
 	SPACE = 32,
@@ -774,6 +886,7 @@ keymod_flags :: enum u32 {
 	MAIN_MODIFIER = 16,
 }
 
+// A code identifying a mouse button.
 mouse_button :: enum u32 {
 	LEFT = 0,
 	RIGHT = 1,
@@ -783,36 +896,59 @@ mouse_button :: enum u32 {
 	BUTTON_COUNT = 5,
 }
 
+// A structure describing a key event or a mouse button event.
 key_event :: struct {
+	// The action that was done on the key.
 	action: key_action,
+	// The scan code of the key. Only valid for key events.
 	scanCode: scan_code,
+	// The key code of the key. Only valid for key events.
 	keyCode: key_code,
+	// The button of the mouse. Only valid for mouse button events.
 	button: mouse_button,
+	// Modifier flags indicating which modifier keys where pressed at the time of the event.
 	mods: keymod_flags,
+	// The number of clicks that where detected for the button. Only valid for mouse button events.
 	clickCount: u8,
 }
 
+// A structure describing a character input event.
 char_event :: struct {
+	// The unicode codepoint of the character.
 	codepoint: utf32,
+	// The utf8 sequence of the character.
 	sequence: [8]char,
+	// The utf8 sequence length.
 	seqLen: u8,
 }
 
+// A structure describing a mouse move or a mouse wheel event. Mouse coordinates have their origin at the top-left corner of the window, with the y axis going down.
 mouse_event :: struct {
+	// The x coordinate of the mouse.
 	x: f32,
+	// The y coordinate of the mouse.
 	y: f32,
+	// The delta from the last x coordinate of the mouse, or the scroll value along the x coordinate.
 	deltaX: f32,
+	// The delta from the last y coordinate of the mouse, or the scoll value along the y  coordinate.
 	deltaY: f32,
+	// Modifier flags indicating which modifier keys where pressed at the time of the event.
 	mods: keymod_flags,
 }
 
+// A structure describing a window move or resize event.
 move_event :: struct {
+	// The position and dimension of the frame rectangle, i.e. including the window title bar and border.
 	frame: rect,
+	// The position and dimension of the content rectangle, relative to the frame rectangle.
 	content: rect,
 }
 
+// A structure describing an event sent to the application.
 event :: struct {
+	// The window in which this event happened.
 	window: window,
+	// The type of the event. This determines which member of the event union is active.
 	type: event_type,
 	_: struct #raw_union {
 		key: key_event,
@@ -823,47 +959,76 @@ event :: struct {
 	},
 }
 
+// This enum describes the kinds of possible file dialogs.
 file_dialog_kind :: enum u32 {
+	// The file dialog is a save dialog.
 	SAVE = 0,
+	// The file dialog is an open dialog.
 	OPEN = 1,
 }
 
-// file_dialog_flags :: u32
+// A type for flags describing various file dialog options.
+file_dialog_flags :: u32
 
+// File dialog flags.
 file_dialog_flags :: enum u32 {
+	// This dialog allows selecting files.
 	FILES = 1,
+	// This dialog allows selecting directories.
 	DIRECTORIES = 2,
+	// This dialog allows selecting multiple items.
 	MULTIPLE = 4,
+	// This dialog allows creating directories.
 	CREATE_DIRECTORIES = 8,
 }
 
+// A structure describing a file dialog.
 file_dialog_desc :: struct {
+	// The kind of file dialog, see `oc_file_dialog_kind`.
 	kind: file_dialog_kind,
+	// A combination of file dialog flags used to enable file dialog options.
 	flags: file_dialog_flags,
+	// The title of the dialog, displayed in the dialog title bar.
 	title: str8,
+	// Optional. The label of the OK button, e.g. "Save" or "Open".
 	okLabel: str8,
+	// Optional. A file handle to the root directory for the dialog. If set to zero, the root directory is the application's default data directory.
 	startAt: file,
+	// Optional. The path of the starting directory of the dialog, relative to its root directory. If set to nil, the dialog starts at its root directory.
 	startPath: str8,
+	// A list of file extensions used to restrict which files can be selected in this dialog. An empty list allows all files to be selected. Extensions should be provided without a leading dot.
 	filters: str8_list,
 }
 
+// An enum identifying the button clicked by the user when a file dialog returns.
 file_dialog_button :: enum u32 {
+	// The user clicked the "Cancel" button, or closed the dialog box.
 	CANCEL = 0,
+	// The user clicked the "OK" button.
 	OK = 1,
 }
 
+// A structure describing the result of a file dialog.
 file_dialog_result :: struct {
+	// The button clicked by the user.
 	button: file_dialog_button,
+	// The path that was selected when the user clicked the OK button. If the dialog box had the `OC_FILE_DIALOG_MULTIPLE` flag set, this is the first file of the list of selected paths.
 	path: str8,
+	// If the dialog box had the `OC_FILE_DIALOG_MULTIPLE` flag set and the user clicked the OK button, this list contains the selected paths.
 	selection: str8_list,
 }
 
 @(default_calling_convention="c", link_prefix="oc_")
 foreign {
+	// Set the title of the application's window.
 	window_set_title :: proc(title: str8) ---
+	// Set the size of the application's window.
 	window_set_size :: proc(size: vec2) ---
+	// Request the system to quit the application.
 	request_quit :: proc() ---
+	// Convert a scancode to a keycode, according to current keyboard layout.
 	scancode_to_keycode :: proc(scanCode: scan_code) -> key_code ---
+	// Put a string in the clipboard.
 	clipboard_set_string :: proc(_string: str8) ---
 }
 
@@ -875,101 +1040,161 @@ foreign {
 // API for opening, reading and writing files.
 ////////////////////////////////////////////////////////////////////////////////
 
+// An opaque handle identifying an opened file.
 file :: distinct u64
 
+// The type of file open flags describing file open options.
 file_open_flags :: u16
 
+// Flags for the `oc_file_open()` function.
 file_open_flags_enum :: enum u32 {
+	// No options.
 	NONE = 0,
+	// Open the file in 'append' mode. All writes append data at the end of the file.
 	APPEND = 2,
+	// Truncate the file to 0 bytes when opening.
 	TRUNCATE = 4,
+	// Create the file if it does not exist.
 	CREATE = 8,
+	// If the file is a symlink, open the symlink itself instead of following it.
 	SYMLINK = 16,
+	// If the file is a symlink, the call to open will fail.
 	NO_FOLLOW = 32,
+	// Reserved.
 	RESTRICT = 64,
 }
 
 file_access :: u16
 
+// This enum describes the access permissions of a file handle.
 file_access_enum :: enum u32 {
+	// The file handle has no access permissions.
 	NONE = 0,
+	// The file handle can be used for reading from the file.
 	READ = 2,
+	// The file handle can be used for writing to the file.
 	WRITE = 4,
 }
 
+// This enum is used in `oc_file_seek()` to specify the starting point of the seek operation.
 file_whence :: enum u32 {
+	// Set the file position relative to the beginning of the file.
 	SET = 0,
+	// Set the file position relative to the end of the file.
 	END = 1,
+	// Set the file position relative to the current position.
 	CURRENT = 2,
 }
 
+// A type used to identify I/O requests.
 io_req_id :: u64
 
+// A type used to identify I/O operations.
 io_op :: u32
 
+// This enum declares all I/O operations.
 io_op_enum :: enum u32 {
+	// ['Open a file at a path relative to a given root directory.', '', "    - `handle` is the handle to the root directory. If it is nil, the application's default directory is used.", '    - `size` is the size of the path, in bytes.', '    - `buffer` points to an array containing the path of the file to open, relative to the directory identified by `handle`.', '    - `open` contains the permissions and flags for the open operation.']
 	OPEN_AT = 0,
+	// ['Close a file handle.', '', '    - `handle` is the handle to close.']
 	CLOSE = 1,
+	// ['Get status information for a file handle.', '', '    - `handle` is the handle to stat.', '    - `size` is the size of the result buffer. It should be at least `sizeof(oc_file_status)`.', '    - `buffer` is the result buffer.']
 	FSTAT = 2,
+	// ['Move the file position in a file.', '', '    - `handle` is the handle of the file.', '    - `offset` specifies the offset of the new position, relative to the base position specified by `whence`.', '    - `whence` determines the base position for the seek operation.']
 	SEEK = 3,
+	// ['Read data from a file.', '', '    - `handle` is the handle of the file.', '    - `size` is the number of bytes to read.', '    - `buffer` is the result buffer. It should be big enough to hold `size` bytes.']
 	READ = 4,
+	// ['Write data to a file.', '', '    - `handle` is the handle of the file.', '    - `size` is the number of bytes to write.', '    - `buffer` contains the data to write to the file.']
 	WRITE = 5,
+	// ['Get the error attached to a file handle.', '', '    - `handle` is the handle of the file.']
 	OC_OC_IO_ERROR = 6,
 }
 
+// A structure describing an I/O request.
 io_req :: struct {
+	// An identifier for the request. You can set this to any value you want. It is passed back in the `oc_io_cmp` completion and can be used to match requests and completions.
 	id: io_req_id,
+	// The requested operation.
 	op: io_op,
+	// A file handle used by some operations.
 	handle: file,
+	// An offset used by some operations.
 	offset: i64,
+	// A size indicating the capacity of the buffer pointed to by `buffer`, in bytes.
 	size: u64,
 	_: struct #raw_union {
 		buffer: cstring,
 		unused: u64,
 	},
 	_: struct #raw_union {
-		_: struct {
-			rights: file_access,
-			flags: file_open_flags,
-		},
 		open: struct {
+			// The access permissions requested on the file to open.
 			rights: file_access,
+			// The options to use when opening the file.
 			flags: file_open_flags,
 		},
 		whence: file_whence,
 	},
 }
 
+// A type identifying an I/O error.
 io_error :: i32
 
+// This enum declares all I/O error values.
 io_error_enum :: enum u32 {
+	// No error.
 	OK = 0,
+	// An unexpected error happened.
 	UNKNOWN = 1,
+	// The request had an invalid operation.
 	OP = 2,
+	// The request had an invalid handle.
 	HANDLE = 3,
+	// The operation was not carried out because the file handle has previous errors.
 	PREV = 4,
+	// The request contained wrong arguments.
 	ARG = 5,
+	// The operation requires permissions that the file handle doesn't have.
 	PERM = 6,
+	// The operation couldn't complete due to a lack of space in the result buffer.
 	SPACE = 7,
+	// One of the directory in the path does not exist or couldn't be traversed.
 	NO_ENTRY = 8,
+	// The file already exists.
 	EXISTS = 9,
+	// The file is not a directory.
 	NOT_DIR = 10,
+	// The file is a directory.
 	DIR = 11,
+	// There are too many opened files.
 	MAX_FILES = 12,
+	// The path contains too many symbolic links (this may be indicative of a symlink loop).
 	MAX_LINKS = 13,
+	// The path is too long.
 	PATH_LENGTH = 14,
+	// The file is too large.
 	FILE_SIZE = 15,
+	// The file is too large to be opened.
 	OVERFLOW = 16,
+	// The file is locked or the device on which it is stored is not ready.
 	NOT_READY = 17,
+	// The system is out of memory.
 	MEM = 18,
+	// The operation was interrupted by a signal.
 	INTERRUPT = 19,
+	// A physical error happened.
 	PHYSICAL = 20,
+	// The device on which the file is stored was not found.
 	NO_DEVICE = 21,
+	// One element along the path is outside the root directory subtree.
 	WALKOUT = 22,
 }
 
+// A structure describing the completion of an I/O operation.
 io_cmp :: struct {
+	// The request ID as passed in the `oc_io_req` request that generated this completion.
 	id: io_req_id,
+	// The error value for the operation.
 	error: io_error,
 	_: struct #raw_union {
 		result: i64,
@@ -979,17 +1204,27 @@ io_cmp :: struct {
 	},
 }
 
+// An enum identifying the type of a file.
 file_type :: enum u32 {
+	// The file is of unknown type.
 	UNKNOWN = 0,
+	// The file is a regular file.
 	REGULAR = 1,
+	// The file is a directory.
 	DIRECTORY = 2,
+	// The file is a symbolic link.
 	SYMLINK = 3,
+	// The file is a block device.
 	BLOCK = 4,
+	// The file is a character device.
 	CHARACTER = 5,
+	// The file is a FIFO pipe.
 	FIFO = 6,
+	// The file is a socket.
 	SOCKET = 7,
 }
 
+// A type describing file permissions.
 file_perm :: u16
 
 file_perm_enum :: enum u32 {
@@ -1024,16 +1259,27 @@ file_status :: struct {
 
 @(default_calling_convention="c", link_prefix="oc_")
 foreign {
+	// Send a single I/O request and wait for its completion.
 	io_wait_single_req :: proc(req: ^io_req) -> io_cmp ---
+	// Returns a `nil` file handle
 	file_nil :: proc() -> file ---
+	// Test if a file handle is `nil`.
 	file_is_nil :: proc(handle: file) -> bool ---
+	// Open a file in the applications' default directory subtree.
 	file_open :: proc(path: str8, rights: file_access, flags: file_open_flags) -> file ---
+	// Open a file in a given directory's subtree.
 	file_open_at :: proc(dir: file, path: str8, rights: file_access, flags: file_open_flags) -> file ---
+	// Close a file.
 	file_close :: proc(file: file) ---
+	// Get the current position in a file.
 	file_pos :: proc(file: file) -> i64 ---
+	// Set the current position in a file.
 	file_seek :: proc(file: file, offset: i64, whence: file_whence) -> i64 ---
+	// Write data to a file.
 	file_write :: proc(file: file, size: u64, buffer: cstring) -> u64 ---
+	// Read from a file.
 	file_read :: proc(file: file, size: u64, buffer: cstring) -> u64 ---
+	// Get the last error on a file handle.
 	file_last_error :: proc(handle: file) -> io_error ---
 	file_get_status :: proc(file: file) -> file_status ---
 	file_size :: proc(file: file) -> u64 ---
@@ -1044,19 +1290,25 @@ foreign {
 // API for obtaining file capabilities through open/save dialogs.
 ////////////////////////////////////////////////////////////////////////////////
 
+// An element of a list of file handles acquired through a file dialog.
 file_open_with_dialog_elt :: struct {
 	listElt: list_elt,
 	file: file,
 }
 
+// A structure describing the result of a call to `oc_file_open_with_dialog()`.
 file_open_with_dialog_result :: struct {
+	// The button of the file dialog clicked by the user.
 	button: file_dialog_button,
+	// The file that was opened through the dialog. If the dialog had the `OC_FILE_DIALOG_MULTIPLE` flag set, this is equal to the first handle in the `selection` list.
 	file: file,
+	// If the dialog had the `OC_FILE_DIALOG_MULTIPLE` flag set, this list of `oc_file_open_with_dialog_elt` contains the handles of the opened files.
 	selection: list,
 }
 
 @(default_calling_convention="c", link_prefix="oc_")
 foreign {
+	// Open files through a file dialog. This allows the user to select files outside the root directories currently accessible to the applications, giving them a way to provide new file capabilities to the application.
 	file_open_with_dialog :: proc(arena: ^arena, rights: file_access, flags: file_open_flags, desc: ^file_dialog_desc) -> file_open_with_dialog_result ---
 }
 
@@ -1066,17 +1318,17 @@ foreign {
 
 @(default_calling_convention="c", link_prefix="oc_")
 foreign {
-	// path_slice_directory :: proc(path: str8) -> str8 ---
-	// path_slice_filename :: proc(path: str8) -> str8 ---
-	// path_split :: proc(arena: ^arena, path: str8) -> str8_list ---
-	// path_join :: proc(arena: ^arena, elements: str8_list) -> str8 ---
-	// path_append :: proc(arena: ^arena, parent: str8, relPath: str8) -> str8 ---
-	// path_is_absolute :: proc(path: str8) -> bool ---
+	// Get a string slice of the directory part of a path.
 	path_slice_directory :: proc(path: str8) -> str8 ---
+	// Get a string slice of the file name part of a path.
 	path_slice_filename :: proc(path: str8) -> str8 ---
+	// Split a path into path elements.
 	path_split :: proc(arena: ^arena, path: str8) -> str8_list ---
+	// Join path elements to form a path.
 	path_join :: proc(arena: ^arena, elements: str8_list) -> str8 ---
+	// Append a path to another path.
 	path_append :: proc(arena: ^arena, parent: str8, relPath: str8) -> str8 ---
+	// Test wether a path is an absolute path.
 	path_is_absolute :: proc(path: str8) -> bool ---
 }
 
