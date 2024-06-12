@@ -258,6 +258,7 @@ def gen_enum_bit_set_combo(obj, file, name, indent):
 
     # do not write out the value names of bit_set backing enum values
     # also drop the NONE = 0 value
+    field_count = 0
     fields_indent_str = indent_string(indent + 1)
     for const in obj["constants"]:
         real_name = const["name"]
@@ -271,7 +272,14 @@ def gen_enum_bit_set_combo(obj, file, name, indent):
             const_docs = const["doc"]
             file.write(f"{fields_indent_str}// {const_docs}\n")
 
-        file.write(f"{fields_indent_str}{const_name},\n")
+        file.write(f"{fields_indent_str}{const_name}")
+
+        # odin bit_set should start at 1
+        if field_count == 0:
+            file.write(" = 1")
+
+        file.write(",\n")
+        field_count += 1
 
     file.write(f"{indent_str}}}\n")
     file.write(f"{indent_str}{bitset_name} :: bit_set[{enum_name}; {enum_sizing}]\n\n")
@@ -689,7 +697,8 @@ UNICODE_SUPPLEMENTARY_PRIVATE_USE_AREA_B  :: unicode_range { 0x100000, 65533 }
 """)
 
 def write_clock(file):
-    file.write("""clock_kind :: enum c.int {
+    file.write("""
+clock_kind :: enum c.int {
 \tMONOTONIC,
 \tUPTIME,
 \tDATE,
@@ -701,6 +710,17 @@ foreign {
 }
 """)
 
+def write_helpers(file):
+    file.write("""
+file_write_slice :: proc(file: file, slice: []char) -> u64 {
+\treturn file_write(file, u64(len(slice)), raw_data(slice))
+}
+
+file_read_slice :: proc(file: file, slice: []char) -> u64 {
+\treturn file_read(file, u64(len(slice)), raw_data(slice))
+}
+""")
+
 if __name__ == "__main__":
     with open("api.json", "r") as api_file:
         api_desc = json.load(api_file)
@@ -709,6 +729,7 @@ if __name__ == "__main__":
         write_package(odin_file)
         write_unicode_constants(odin_file)
         write_clock(odin_file)
+        write_helpers(odin_file)
         temp_block = io.StringIO("")
         
         for module in api_desc:

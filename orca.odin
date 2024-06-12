@@ -139,6 +139,7 @@ UNICODE_TAGS :: unicode_range { 0xe0000, 127 }
 UNICODE_VARIATION_SELECTORS_SUPPLEMENT :: unicode_range { 0xe0100, 239 }
 UNICODE_SUPPLEMENTARY_PRIVATE_USE_AREA_A :: unicode_range { 0xf0000, 65533 }
 UNICODE_SUPPLEMENTARY_PRIVATE_USE_AREA_B  :: unicode_range { 0x100000, 65533 }
+
 clock_kind :: enum c.int {
 	MONOTONIC,
 	UPTIME,
@@ -148,6 +149,14 @@ clock_kind :: enum c.int {
 @(default_calling_convention="c", link_prefix="oc_")
 foreign {
 	clock_time :: proc(clock: clock_kind) -> f64 ---
+}
+
+file_write_slice :: proc(file: file, slice: []char) -> u64 {
+	return file_write(file, u64(len(slice)), raw_data(slice))
+}
+
+file_read_slice :: proc(file: file, slice: []char) -> u64 {
+	return file_read(file, u64(len(slice)), raw_data(slice))
 }
 ////////////////////////////////////////////////////////////////////////////////
 // Utility data structures and helpers used throughout the Orca API.
@@ -878,7 +887,7 @@ key_code :: enum u32 {
 }
 
 keymod_flag :: enum u32 {
-	ALT,
+	ALT = 1,
 	SHIFT,
 	CTRL,
 	CMD,
@@ -971,7 +980,7 @@ file_dialog_kind :: enum u32 {
 // File dialog flags.
 file_dialog_flag :: enum u32 {
 	// This dialog allows selecting files.
-	FILES,
+	FILES = 1,
 	// This dialog allows selecting directories.
 	DIRECTORIES,
 	// This dialog allows selecting multiple items.
@@ -1046,7 +1055,7 @@ file :: distinct u64
 // Flags for the `oc_file_open()` function.
 file_open_flag :: enum u16 {
 	// Open the file in 'append' mode. All writes append data at the end of the file.
-	APPEND,
+	APPEND = 1,
 	// Truncate the file to 0 bytes when opening.
 	TRUNCATE,
 	// Create the file if it does not exist.
@@ -1063,7 +1072,7 @@ file_open_flags :: bit_set[file_open_flag; u16]
 // This enum describes the access permissions of a file handle.
 file_access_flag :: enum u16 {
 	// The file handle can be used for reading from the file.
-	READ,
+	READ = 1,
 	// The file handle can be used for writing to the file.
 	WRITE,
 }
@@ -1215,7 +1224,7 @@ file_type :: enum u32 {
 
 // A type describing file permissions.
 file_perm_flag :: enum u16 {
-	OTHER_EXEC,
+	OTHER_EXEC = 1,
 	OTHER_WRITE,
 	OTHER_READ,
 	GROUP_EXEC,
@@ -1869,7 +1878,7 @@ ui_selector_kind :: enum u32 {
 }
 
 ui_status_flag :: enum u8 {
-	HOVER,
+	HOVER = 1,
 	HOT,
 	ACTIVE,
 	DRAGGING,
@@ -1962,7 +1971,7 @@ ui_sig :: struct {
 ui_box_draw_proc :: proc(arg0: ^ui_box, arg1: rawptr)
 
 ui_flag :: enum u32 {
-	CLICKABLE,
+	CLICKABLE = 1,
 	SCROLL_WHEEL_X,
 	SCROLL_WHEEL_Y,
 	BLOCK_MOUSE,
