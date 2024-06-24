@@ -179,7 +179,7 @@ vec2i :: [2]i32
 vec4 :: [4]f32
 
 // A 2-by-3 matrix.
-mat2x3 :: #row_major matrix[2, 3]f32
+mat2x3 :: [6]f32
 
 // An axis-aligned rectangle.
 rect :: struct { x, y, w, h: f32 }

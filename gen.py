@@ -152,7 +152,7 @@ type_builtins = {
     "ui_box_size": "[2]ui_size",
     "ui_box_floating": "[2]bool",
     
-    "mat2x3": "#row_major matrix[2, 3]f32",
+    "mat2x3": "[6]f32",
     
     "utf32": "rune",
     "str8": "string",
