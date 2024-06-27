@@ -1,6 +1,9 @@
 import json
 import io
 
+# TODO API NOT EXISTING
+# ui_menu_bar_begin _str8 version
+
 # exclude oc_* from any string
 def prefix_trim_oc(name):
     if name.startswith("_oc_"): # some enums have this
@@ -17,6 +20,8 @@ def get_type_name_or_kind(obj):
     # if it contains an orca name, use that one instead
     if "name" in obj:
         result = prefix_trim_oc(obj["name"]) # names need to be trimmed
+    elif result == "bool":
+        result = "c.bool"
 
     return result
 
@@ -146,7 +151,7 @@ type_builtins = {
     "vec4": "[4]f32",
     "mat2x3": "[6]f32",
     "rect": "struct { x, y, w, h: f32 }",
-    "color": "[4]f32",
+    "color": "struct { using c: [4]f32, colorSpace: color_space }",
 
     "ui_layout_align": "[2]ui_align",
     "ui_box_size": "[2]ui_size",
@@ -411,7 +416,7 @@ def gen_structs_manually(file, name):
     if name == "ui_layout":
         file.write("""ui_layout :: struct {
 \taxis: ui_axis,
-\tusing _: [2]f32,
+\tspacing: f32,
 \tmargin: [2]f32,
 \talign: ui_layout_align,
 }""")
