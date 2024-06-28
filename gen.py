@@ -316,7 +316,7 @@ def gen_enum(obj, file, name, indent):
         
         # Exception for OC_STYLE currently, write out constant names
         if real_name.startswith("OC_UI_STYLE"):
-            const_name = real_name[6:]
+            return
         
         const_value = const["value"]
 
@@ -477,6 +477,7 @@ typedef_ignore_list = {
     "file_access",
     "file_perm",
     "ui_status",
+    "ui_style_mask",
 }
 
 # generates an odin constant
@@ -726,6 +727,70 @@ file_read_slice :: proc(file: file, slice: []char) -> u64 {
 }
 """)
 
+''' Converts the C style mask to odin bit_set manually
+ui_style_mask :: u64
+
+STYLE_NONE :: 0
+STYLE_SIZE_WIDTH :: 2
+STYLE_SIZE_HEIGHT :: 4
+STYLE_LAYOUT_AXIS :: 8
+STYLE_LAYOUT_ALIGN_X :: 16
+STYLE_LAYOUT_ALIGN_Y :: 32
+STYLE_LAYOUT_SPACING :: 64
+STYLE_LAYOUT_MARGIN_X :: 128
+STYLE_LAYOUT_MARGIN_Y :: 256
+STYLE_FLOAT_X :: 512
+STYLE_FLOAT_Y :: 1024
+STYLE_COLOR :: 2048
+STYLE_BG_COLOR :: 4096
+STYLE_BORDER_COLOR :: 8192
+STYLE_BORDER_SIZE :: 16384
+STYLE_ROUNDNESS :: 32768
+STYLE_FONT :: 65536
+STYLE_FONT_SIZE :: 131072
+STYLE_ANIMATION_TIME :: 262144
+STYLE_ANIMATION_MASK :: 524288
+STYLE_SIZE :: 6
+STYLE_LAYOUT_MARGINS :: 384
+STYLE_LAYOUT :: 504
+STYLE_FLOAT :: 1536
+STYLE_MASK_INHERITED :: 985088
+'''
+def write_style_bitset(file):
+    file.write("""
+style_enum :: enum {
+\tNONE,
+\t
+\tSIZE_WIDTH,
+\tSIZE_HEIGHT,
+\t
+\tLAYOUT_AXIS,
+\tLAYOUT_ALIGN_X,
+\tLAYOUT_ALIGN_Y,
+\tLAYOUT_SPACING,
+\tLAYOUT_MARGIN_X,
+\tLAYOUT_MARGIN_Y,
+\t
+\tFLOAT_X,
+\tFLOAT_Y,
+
+\tCOLOR,
+\tBG_COLOR,
+\tBORDER_COLOR,
+\tBORDER_SIZE,
+\tROUNDNESS,
+
+\tFONT,
+\tFONT_SIZE,
+
+\tANIMATION_TIME,
+\tANIMATION_MASK,
+}
+
+ui_style_mask :: bit_set[style_enum; u64]
+
+""")
+
 if __name__ == "__main__":
     with open("api.json", "r") as api_file:
         api_desc = json.load(api_file)
@@ -735,6 +800,7 @@ if __name__ == "__main__":
         write_unicode_constants(odin_file)
         write_clock(odin_file)
         write_helpers(odin_file)
+        write_style_bitset(odin_file)
         temp_block = io.StringIO("")
         
         for module in api_desc:

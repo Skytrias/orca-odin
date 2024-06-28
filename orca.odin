@@ -158,6 +158,38 @@ file_write_slice :: proc(file: file, slice: []char) -> u64 {
 file_read_slice :: proc(file: file, slice: []char) -> u64 {
 	return file_read(file, u64(len(slice)), raw_data(slice))
 }
+
+style_enum :: enum {
+	NONE,
+	
+	SIZE_WIDTH,
+	SIZE_HEIGHT,
+	
+	LAYOUT_AXIS,
+	LAYOUT_ALIGN_X,
+	LAYOUT_ALIGN_Y,
+	LAYOUT_SPACING,
+	LAYOUT_MARGIN_X,
+	LAYOUT_MARGIN_Y,
+	
+	FLOAT_X,
+	FLOAT_Y,
+
+	COLOR,
+	BG_COLOR,
+	BORDER_COLOR,
+	BORDER_SIZE,
+	ROUNDNESS,
+
+	FONT,
+	FONT_SIZE,
+
+	ANIMATION_TIME,
+	ANIMATION_MASK,
+}
+
+ui_style_mask :: bit_set[style_enum; u64]
+
 ////////////////////////////////////////////////////////////////////////////////
 // Utility data structures and helpers used throughout the Orca API.
 ////////////////////////////////////////////////////////////////////////////////
@@ -1628,34 +1660,6 @@ ui_size :: struct {
 ui_box_size :: [2]ui_size
 
 ui_box_floating :: [2]bool
-
-ui_style_mask :: u64
-
-STYLE_NONE :: 0
-STYLE_SIZE_WIDTH :: 2
-STYLE_SIZE_HEIGHT :: 4
-STYLE_LAYOUT_AXIS :: 8
-STYLE_LAYOUT_ALIGN_X :: 16
-STYLE_LAYOUT_ALIGN_Y :: 32
-STYLE_LAYOUT_SPACING :: 64
-STYLE_LAYOUT_MARGIN_X :: 128
-STYLE_LAYOUT_MARGIN_Y :: 256
-STYLE_FLOAT_X :: 512
-STYLE_FLOAT_Y :: 1024
-STYLE_COLOR :: 2048
-STYLE_BG_COLOR :: 4096
-STYLE_BORDER_COLOR :: 8192
-STYLE_BORDER_SIZE :: 16384
-STYLE_ROUNDNESS :: 32768
-STYLE_FONT :: 65536
-STYLE_FONT_SIZE :: 131072
-STYLE_ANIMATION_TIME :: 262144
-STYLE_ANIMATION_MASK :: 524288
-STYLE_SIZE :: 6
-STYLE_LAYOUT_MARGINS :: 384
-STYLE_LAYOUT :: 504
-STYLE_FLOAT :: 1536
-STYLE_MASK_INHERITED :: 985088
 
 ui_style :: struct {
 	size: ui_box_size,
