@@ -160,9 +160,7 @@ file_read_slice :: proc(file: file, slice: []char) -> u64 {
 }
 
 style_enum :: enum {
-	NONE,
-	
-	SIZE_WIDTH,
+	SIZE_WIDTH = 1,
 	SIZE_HEIGHT,
 	
 	LAYOUT_AXIS,
@@ -189,6 +187,13 @@ style_enum :: enum {
 }
 
 ui_style_mask :: bit_set[style_enum; u64]
+
+// Masks like the C version that can be used as common combinations
+SIZE :: ui_style_mask { .SIZE_WIDTH, .SIZE_HEIGHT }
+LAYOUT_MARGINS :: ui_style_mask { .LAYOUT_MARGIN_X, .LAYOUT_MARGIN_Y }
+LAYOUT :: ui_style_mask { .LAYOUT_AXIS, .LAYOUT_ALIGN_X, .LAYOUT_ALIGN_Y, .LAYOUT_SPACING, .LAYOUT_MARGIN_X, .LAYOUT_MARGIN_Y }
+FLOAT :: ui_style_mask { .FLOAT_X, .FLOAT_Y }
+MASK_INHERITED :: ui_style_mask { .COLOR, .FONT, .FONT_SIZE, .ANIMATION_TIME, .ANIMATION_MASK }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Utility data structures and helpers used throughout the Orca API.
@@ -2063,7 +2068,7 @@ ui_select_popup_info :: struct {
 	changed: c.bool,
 	selectedIndex: i32,
 	optionCount: i32,
-	options: ^str8,
+	options: [^]str8,
 	placeholder: str8,
 }
 
@@ -2071,7 +2076,7 @@ ui_radio_group_info :: struct {
 	changed: c.bool,
 	selectedIndex: i32,
 	optionCount: i32,
-	options: ^str8,
+	options: [^]str8,
 }
 
 @(default_calling_convention="c", link_prefix="oc_")

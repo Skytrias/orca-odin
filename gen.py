@@ -49,6 +49,10 @@ def get_inner_kind(obj, field_name):
         # turn ^char to cstring
         if output == "^char":
             output = "cstring"
+
+        # pointer to str8 should be multipointer
+        if output == "^str8":
+            output = "[^]str8"
     elif result == "namedType":
         inner_type = obj["type"]
         result = get_type_name_or_kind(inner_type)
@@ -759,9 +763,7 @@ STYLE_MASK_INHERITED :: 985088
 def write_style_bitset(file):
     file.write("""
 style_enum :: enum {
-\tNONE,
-\t
-\tSIZE_WIDTH,
+\tSIZE_WIDTH = 1,
 \tSIZE_HEIGHT,
 \t
 \tLAYOUT_AXIS,
@@ -788,6 +790,13 @@ style_enum :: enum {
 }
 
 ui_style_mask :: bit_set[style_enum; u64]
+
+// Masks like the C version that can be used as common combinations
+SIZE :: ui_style_mask { .SIZE_WIDTH, .SIZE_HEIGHT }
+LAYOUT_MARGINS :: ui_style_mask { .LAYOUT_MARGIN_X, .LAYOUT_MARGIN_Y }
+LAYOUT :: ui_style_mask { .LAYOUT_AXIS, .LAYOUT_ALIGN_X, .LAYOUT_ALIGN_Y, .LAYOUT_SPACING, .LAYOUT_MARGIN_X, .LAYOUT_MARGIN_Y }
+FLOAT :: ui_style_mask { .FLOAT_X, .FLOAT_Y }
+MASK_INHERITED :: ui_style_mask { .COLOR, .FONT, .FONT_SIZE, .ANIMATION_TIME, .ANIMATION_MASK }
 
 """)
 
