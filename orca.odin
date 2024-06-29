@@ -15,6 +15,27 @@ pool :: struct {
 	blockSize: u64,
 }
 
+@(link_prefix="OC_")
+foreign {
+	UI_DARK_THEME: ui_theme
+	UI_LIGHT_THEME: ui_theme
+
+	UI_DARK_PALETTE: ui_palette
+	UI_LIGHT_PALETTE: ui_palette
+}
+
+
+SYS_MAX_ERROR :: 1024
+
+sys_err_def :: struct {
+	msg: [SYS_MAX_ERROR]u8,
+	code: i32,
+}
+
+@(link_prefix="oc_")
+foreign {
+	sys_error: sys_err_def
+}
 UNICODE_BASIC_LATIN :: unicode_range { 0x0000, 127 }
 UNICODE_C1_CONTROLS_AND_LATIN_1_SUPPLEMENT :: unicode_range { 0x0080, 127 }
 UNICODE_LATIN_EXTENDED_A :: unicode_range { 0x0100, 127 }

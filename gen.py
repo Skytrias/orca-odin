@@ -800,12 +800,41 @@ MASK_INHERITED :: ui_style_mask { .COLOR, .FONT, .FONT_SIZE, .ANIMATION_TIME, .A
 
 """)
 
+def write_externs(file):
+    file.write("""@(link_prefix="OC_")
+foreign {
+\tUI_DARK_THEME: ui_theme
+\tUI_LIGHT_THEME: ui_theme
+
+\tUI_DARK_PALETTE: ui_palette
+\tUI_LIGHT_PALETTE: ui_palette
+}
+
+""")
+
+def write_system_error_definition(file):
+    file.write("""
+SYS_MAX_ERROR :: 1024
+
+sys_err_def :: struct {
+\tmsg: [SYS_MAX_ERROR]u8,
+\tcode: i32,
+}
+
+@(link_prefix="oc_")
+foreign {
+\tsys_error: sys_err_def
+}
+""")
+
 if __name__ == "__main__":
     with open("api.json", "r") as api_file:
         api_desc = json.load(api_file)
 
     with open("orca.odin", "w") as odin_file:
         write_package(odin_file)
+        write_externs(odin_file)
+        write_system_error_definition(odin_file)
         write_unicode_constants(odin_file)
         write_clock(odin_file)
         write_helpers(odin_file)
