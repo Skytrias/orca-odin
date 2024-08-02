@@ -4,7 +4,6 @@ import io
 # TODO API NOT EXISTING
 # ui_menu_bar_begin _str8 version
 # ui_selector data has to be accessible
-# draw_proc "c"
 
 # exclude oc_* from any string
 def prefix_trim_oc(name):
@@ -76,6 +75,14 @@ def gen_param(obj, file):
     if name == "buffer" and variable_output == "cstring":
         variable_output = "[^]char"
 
+    if name == "style" and variable_output == "^ui_style":
+        name = "#by_ptr style"
+        variable_output = "ui_style"
+
+    if name == "defaultStyle" and variable_output == "^ui_style":
+        name = "#by_ptr defaultStyle"
+        variable_output = "ui_style"
+
     file.write(f"{name}: {variable_output}")
 
 # generate a multi or single line doc dependant on whats provided
@@ -117,10 +124,15 @@ def gen_proc(obj, name, write_foreign_finish, file, indent):
 
     try_gen_doc(obj, file, indent)
     indent_str = indent_string(indent)
-    file.write(f"{indent_str}{name} :: proc(")
+    file.write(f"{indent_str}{name} :: proc")
+
+    # append proc "c" to typedef procs
+    if indent == 0:
+        file.write(" \"c\" ")
 
     # write params
     param_count = 0
+    file.write("(")
     for param in obj["params"]:
         if param_count > 0:
             file.write(", ")
@@ -253,13 +265,13 @@ def check_enum_name_decimal(name):
 # [1] = the output bit_set name (may be used in parameters or fields types)
 # [2] = bit_set sizing (can't rely on the enum size)
 enum_bit_sets_list = {
-    "keymod_flags": ["keymod_flag", "keymod_flags", "u32"],
-    "file_dialog_flags": ["file_dialog_flag", "file_dialog_flags", "u32"],
-    "file_open_flags_enum": ["file_open_flag", "file_open_flags", "u16"],
-    "file_access_enum": ["file_access_flag", "file_access", "u16"],
-    "file_perm_enum": ["file_perm_flag", "file_perm", "u16"],
-    "ui_status_enum": ["ui_status_flag", "ui_status", "u8"],
-    "ui_flags": ["ui_flag", "ui_flags", "u32"],
+    "keymod_flags": ["keymod_flag", "keymod_flags", "u32", 0],
+    "file_dialog_flags": ["file_dialog_flag", "file_dialog_flags", "u32", 1],
+    "file_open_flags_enum": ["file_open_flag", "file_open_flags", "u16", 1],
+    "file_access_enum": ["file_access_flag", "file_access", "u16", 1],
+    "file_perm_enum": ["file_perm_flag", "file_perm", "u16", 1],
+    "ui_status_enum": ["ui_status_flag", "ui_status", "u8", 1],
+    "ui_flags": ["ui_flag", "ui_flags", "u32", 0],
 }
 
 def gen_enum_bit_set_combo(obj, file, name, indent):
@@ -272,6 +284,7 @@ def gen_enum_bit_set_combo(obj, file, name, indent):
     enum_name = change[0]
     bitset_name = change[1]
     enum_sizing = change[2] # gotta use the same sizing for both, the origin enum
+    enum_start_offset = change[3] # some enums have the first real unit at 1 or 2, which can cause issues
     file.write(f"{indent_str}{enum_name} :: enum {enum_sizing} {{\n")
 
     # do not write out the value names of bit_set backing enum values
@@ -294,7 +307,7 @@ def gen_enum_bit_set_combo(obj, file, name, indent):
 
         # odin bit_set should start at 1
         if field_count == 0:
-            file.write(" = 1")
+            file.write(f" = {enum_start_offset}")
 
         file.write(",\n")
         field_count += 1
