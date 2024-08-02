@@ -3,6 +3,8 @@ import io
 
 # TODO API NOT EXISTING
 # ui_menu_bar_begin _str8 version
+# ui_selector data has to be accessible
+# draw_proc "c"
 
 # exclude oc_* from any string
 def prefix_trim_oc(name):
@@ -20,8 +22,6 @@ def get_type_name_or_kind(obj):
     # if it contains an orca name, use that one instead
     if "name" in obj:
         result = prefix_trim_oc(obj["name"]) # names need to be trimmed
-    elif result == "bool":
-        result = "c.bool"
 
     return result
 
@@ -41,7 +41,7 @@ def get_inner_kind(obj, field_name):
             output = "rawptr"
         else:
             # keep "buffers" as multipointers to their type
-            if field_name == "buffer":
+            if field_name == "buffer" or field_name == "pixels":
                 output = "[^]" + result
             else:
                 output = "^" + result
@@ -101,10 +101,19 @@ def proc_contains_panic(name):
 
     return False
 
+# procs that should be ignore or are replaced by core library utilities already
+proc_ignore_list = {
+    "str8_pushfv",
+    "str8_pushf",
+}
+
 # generate a procedure declation with the parameters and its return type
 def gen_proc(obj, name, write_foreign_finish, file, indent):
     kind = obj["kind"]
     name = prefix_trim_oc(name)
+
+    if name in proc_ignore_list:
+        return
 
     try_gen_doc(obj, file, indent)
     indent_str = indent_string(indent)
@@ -343,7 +352,6 @@ def gen_enum(obj, file, name, indent):
 
 # any oddities that need to be checked for field
 reserved_field_names = {
-    "string", # think this is still allowed but eh
     "matrix",
     "proc",
     "color", # issues when color is also return type...
@@ -405,7 +413,7 @@ def gen_struct_fields(obj, file, indent):
         # convert inner unions to raw_unions structs
         if variable_output == "union":
             if field_name == "":
-                field_name = "_"
+                field_name = "using _"
 
             file.write(f"{indent_str}{field_name}: struct #raw_union {{\n")
             variable_type = field["type"]
@@ -414,9 +422,24 @@ def gen_struct_fields(obj, file, indent):
         elif variable_output == "array": 
             gen_fixed_array(field, file, field_name, indent)
         else:
-            file.write(f"{indent_str}{field_name}: {variable_output},\n")
+            file.write(f"{indent_str}{field_name}: {variable_output}")
+
+            # some specific tags for field names, not perfect but atleast automatic
+            if field_name == "optionCount":
+                file.write(" `fmt:\"-\"`")
+            elif field_name == "options":
+                file.write(" `fmt:\"s,optionCount\"`")
+
+            file.write(",\n")
 
 def gen_structs_manually(file, name):
+    if name == "ui_input_text":
+        file.write("""ui_input_text :: struct {
+\tcount: u8 `fmt:"-"`,
+\tcodePoints: [64]utf32 `fmt:"s,count"`,
+}""")
+        return True
+
     if name == "ui_layout":
         file.write("""ui_layout :: struct {
 \taxis: ui_axis,
@@ -560,8 +583,7 @@ def iterate_object(obj, file, shared_block):
 
 # write package info and types
 def write_package(file):
-    file.write("""//+build orca
-package orca
+    file.write("""package orca
 
 import "core:c"
 
@@ -817,7 +839,7 @@ def write_system_error_definition(file):
 SYS_MAX_ERROR :: 1024
 
 sys_err_def :: struct {
-\tmsg: [SYS_MAX_ERROR]u8,
+\tmsg: [SYS_MAX_ERROR]u8 `fmt:"s,0"`,
 \tcode: i32,
 }
 
